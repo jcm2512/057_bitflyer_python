@@ -22,7 +22,10 @@ CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
 
 URL = "https://api.bitflyer.com"
 
-CSV_DATA = "data.csv"
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local_docs")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+CSV_DATA = os.path.join(OUTPUT_DIR, "data.csv")
 
 JST = timezone("Asia/Tokyo")
 
@@ -66,20 +69,6 @@ def get_balance(currency_code):
     for balance in response.json():
         if balance["currency_code"] == currency_code:
             return format(balance["amount"], ".8f")
-
-
-def get_executions():
-    method = "GET"
-    path = "/v1/me/getexecutions"
-    url = URL + path
-
-    headers = get_headers(API_KEY, API_SECRET, method, path)
-    response = requests.get(url, headers=headers, timeout=10)
-
-    if response.status_code != 200:
-        print(f"Error: {response.status_code}")
-        print(response.text)
-    return response.json()
 
 
 def fetch_ohlcv_using_cryptocompare():
@@ -170,7 +159,7 @@ def simple_plot():
     plt.xticks(rotation=45)
     plt.ticklabel_format(style="plain", axis="y")
 
-    plot_file_name = "docs/plot.png"
+    plot_file_name = os.path.join(OUTPUT_DIR, "plot.png")
     plt.savefig(plot_file_name)
     print(f"Simple plot saved as {plot_file_name}")
 
@@ -197,7 +186,7 @@ def mpf_plot():
 
     ha_df = to_heikin_ashi(df)
     # Save the plot to a file
-    plot_file_name = "docs/candlestick_plot.png"
+    plot_file_name = os.path.join(OUTPUT_DIR, "candlestick_plot.png")
 
     # Create the plot and return the figure and list of axes objects
     fig, axes = mpf.plot(
@@ -221,7 +210,7 @@ def mpf_plot():
 
 if __name__ == "__main__":
     print("Starting script...")
-    # update_csv_data()
+    update_csv_data()
     simple_plot()
     mpf_plot()
     print("Script finished.")
