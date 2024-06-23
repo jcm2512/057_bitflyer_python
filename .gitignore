@@ -5,6 +5,3 @@
 .env
 
 # Ignore all PNG files in the docs directory
-docs/*.png
-docs/candlestick_plot.png
-docs/plot.png

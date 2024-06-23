@@ -82,35 +82,6 @@ def get_executions():
     return response.json()
 
 
-def get_OHLCV():
-    url = "https://rest.coinapi.io/v1/ohlcv/exchanges/BITFLYER_SPOT_BTC_JPY/history?period_id=1MTH&time_start=2023-03-01T00:00:00"
-
-    payload = {}
-    headers = {"Accept": "text/plain", "X-CoinAPI-Key": COIN_API_KEY}
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-    return response.json()
-
-
-def fetch_ohlcv():
-    url = "https://rest.coinapi.io/v1/ohlcv/BITFLYER_SPOT_ETH_BTC/latest?period_id=1DAY"
-    headers = {"X-CoinAPI-Key": COIN_API_KEY}  # Replace with your API key
-
-    response = requests.get(url, headers=headers)
-
-    # Check if the response is successful
-    if response.status_code == 200:
-        if response.content:
-            return response.json()
-        else:
-            print("Response is empty.")
-            return None
-    else:
-        # Handle other HTTP status codes
-        print(f"Failed to fetch data. Status code: {response.status_code}")
-        return None
-
-
 def fetch_ohlcv_using_cryptocompare():
     url = "https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=JPY&limit=100&e=Bitflyer"
     headers = {"authorization": CRYPTOCOMPARE_API_KEY}
@@ -250,7 +221,7 @@ def mpf_plot():
 
 if __name__ == "__main__":
     print("Starting script...")
-    update_csv_data()
+    # update_csv_data()
     simple_plot()
     mpf_plot()
     print("Script finished.")
