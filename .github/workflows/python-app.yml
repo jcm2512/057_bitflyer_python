@@ -34,6 +34,7 @@ jobs:
           echo "API_SECRET=${{ secrets.API_SECRET }}" >> $GITHUB_ENV
           echo "COIN_API_KEY=${{ secrets.COIN_API_KEY }}" >> $GITHUB_ENV
           echo "CRYPTOCOMPARE_API_KEY=${{ secrets.CRYPTOCOMPARE_API_KEY }}" >> $GITHUB_ENV
+          echo "OUTPUT_DIR=${{ secrets.OUTPUT_DIR }}" >> $GITHUB_ENV
 
       - name: Run Python script
         run: python main.py
