@@ -8,6 +8,7 @@ import mplfinance as mpf
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from pytz import timezone
 from datetime import datetime
 from dotenv import load_dotenv
@@ -227,14 +228,21 @@ def mpf_plot():
     # Save the plot to a file
     plot_file_name = "docs/candlestick_plot.png"
 
-    mpf.plot(
+    # Create the plot and return the figure and axis objects
+    fig, ax = mpf.plot(
         ha_df,
         type="candle",
         style="charles",
         title="Candlestick Chart",
         ylabel="Price",
-        savefig=plot_file_name,
+        returnfig=True,  # Return the figure and axis objects for further customization
     )
+
+    # Set the y-axis formatter to avoid scientific notation
+    ax.yaxis.set_major_formatter(ticker.FormatStrFormatter("%.2f"))
+
+    # Save the figure to a file
+    fig.savefig(plot_file_name)
     print(f"CandleStick plot saved as {plot_file_name}")
 
 
