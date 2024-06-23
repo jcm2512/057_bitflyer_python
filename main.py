@@ -236,11 +236,12 @@ def mpf_plot():
         title="Candlestick Chart",
         ylabel="Price",
         returnfig=True,  # Return the figure and axes objects for further customization
+        tight_layout=False,
     )
 
     # Set the y-axis formatter to avoid scientific notation
     # Assuming the first axis is the one you want to modify
-    axes[0].yaxis.set_major_formatter(ticker.FormatStrFormatter("%.2f"))
+    axes[0].yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:,.0f}"))
 
     # Save the figure to a file
     fig.savefig(plot_file_name)
