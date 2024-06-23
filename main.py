@@ -186,7 +186,7 @@ def simple_plot():
     plt.xticks(rotation=45)
     plt.ticklabel_format(style="plain", axis="y")
 
-    plot_file_name = "plot.png"
+    plot_file_name = "docs/plot.png"
     plt.savefig(plot_file_name)
 
 
@@ -216,10 +216,11 @@ def mpf_plot():
         style="charles",
         title="Candlestick Chart",
         ylabel="Price",
-        savefig="candlestick_plot.png",
+        savefig="docs/candlestick_plot.png",
     )
 
 
 if __name__ == "__main__":
+    simple_plot()
     mpf_plot()
     print("Hello World")
