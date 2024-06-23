@@ -4,3 +4,4 @@ mplfinance
 pandas
 numpy
 python-dotenv
+pytz

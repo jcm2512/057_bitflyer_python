@@ -8,6 +8,8 @@ import mplfinance as mpf
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from pytz import timezone
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +22,8 @@ CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
 URL = "https://api.bitflyer.com"
 
 CSV_DATA = "data.csv"
+
+JST = timezone("Asia/Tokyo")
 
 matplotlib.use("Agg")
 
@@ -163,12 +167,19 @@ def to_heikin_ashi(df):
     return ha_df
 
 
+def convert_to_jst(df, time_column):
+    # Convert to datetime and then to JST
+    df[time_column] = pd.to_datetime(df[time_column], unit="s")
+    df[time_column] = df[time_column].dt.tz_localize("UTC").dt.tz_convert(JST)
+    return df
+
+
 def simple_plot():
     print("Generating simple plot...")
 
     df = pd.read_csv(CSV_DATA)
 
-    df["time"] = pd.to_datetime(df["time"], unit="s")
+    df = convert_to_jst(df, "time")
 
     # Plot the data
     plt.figure(figsize=(10, 6))
@@ -196,7 +207,7 @@ def mpf_plot():
     print("Generating CandleStick plot...")
 
     df = pd.read_csv(CSV_DATA)
-    df["time"] = pd.to_datetime(df["time"], unit="s")
+    df = convert_to_jst(df, "time")
 
     # Set the 'time' column as the index
     df.set_index("time", inplace=True)
