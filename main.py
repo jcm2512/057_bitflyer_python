@@ -164,6 +164,7 @@ def to_heikin_ashi(df):
 
 
 def simple_plot():
+    print("Generating simple plot...")
 
     df = pd.read_csv(CSV_DATA)
 
@@ -188,9 +189,12 @@ def simple_plot():
 
     plot_file_name = "docs/plot.png"
     plt.savefig(plot_file_name)
+    print(f"Simple plot saved as {plot_file_name}")
 
 
 def mpf_plot():
+    print("Generating CandleStick plot...")
+
     df = pd.read_csv(CSV_DATA)
     df["time"] = pd.to_datetime(df["time"], unit="s")
 
@@ -210,17 +214,22 @@ def mpf_plot():
 
     ha_df = to_heikin_ashi(df)
     # Save the plot to a file
+    plot_file_name = "docs/candlestick_plot.png"
+
     mpf.plot(
         ha_df,
         type="candle",
         style="charles",
         title="Candlestick Chart",
         ylabel="Price",
-        savefig="docs/candlestick_plot.png",
+        savefig=plot_file_name,
     )
+    print(f"CandleStick plot saved as {plot_file_name}")
 
 
 if __name__ == "__main__":
+    print("Starting script...")
+    update_csv_data()
     simple_plot()
     mpf_plot()
-    print("Hello World")
+    print("Script finished.")
