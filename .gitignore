@@ -3,5 +3,3 @@
 
 # Environment variables
 .env
-
-# Ignore all PNG files in the docs directory
