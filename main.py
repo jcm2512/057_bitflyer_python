@@ -228,18 +228,19 @@ def mpf_plot():
     # Save the plot to a file
     plot_file_name = "docs/candlestick_plot.png"
 
-    # Create the plot and return the figure and axis objects
-    fig, ax = mpf.plot(
+    # Create the plot and return the figure and list of axes objects
+    fig, axes = mpf.plot(
         ha_df,
         type="candle",
         style="charles",
         title="Candlestick Chart",
         ylabel="Price",
-        returnfig=True,  # Return the figure and axis objects for further customization
+        returnfig=True,  # Return the figure and axes objects for further customization
     )
 
     # Set the y-axis formatter to avoid scientific notation
-    ax.yaxis.set_major_formatter(ticker.FormatStrFormatter("%.2f"))
+    # Assuming the first axis is the one you want to modify
+    axes[0].yaxis.set_major_formatter(ticker.FormatStrFormatter("%.2f"))
 
     # Save the figure to a file
     fig.savefig(plot_file_name)
