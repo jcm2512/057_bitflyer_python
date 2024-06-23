@@ -221,4 +221,5 @@ def mpf_plot():
 
 
 if __name__ == "__main__":
+    mpf_plot()
     print("Hello World")
