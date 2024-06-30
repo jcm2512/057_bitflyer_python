@@ -37,7 +37,7 @@ MPF_PLOT = os.path.join(OUTPUT_DIR, "candlestick_plot.png")
 JST = timezone("Asia/Tokyo")
 
 CHART_SPAN = 500
-PERIOD = 200
+PERIOD = 100
 
 matplotlib.use("Agg")
 
@@ -104,9 +104,7 @@ def calculate_ema(df, period=PERIOD, column="close"):
     df = df.copy()
     df["ema"] = df[column].ewm(span=period, adjust=False).mean()
     df["signal"] = (
-        df["ema"]
-        .diff()
-        .apply(lambda x: "UP" if x > 0 else ("DOWN" if x < 0 else "FLAT"))
+        df["ema"].diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
     )
     return df
 
@@ -203,19 +201,28 @@ def mpf_plot(df, range=200):
 if __name__ == "__main__":
     print("Starting script...")
     df = pd.read_csv(CSV_DATA)
-    get_data = fetch_csv_data(50)
-    new_df_filtered = get_data[~get_data["time"].isin(df["time"])]
-    df = pd.concat([df, new_df_filtered], ignore_index=True)
 
-    # keep only the last 500 entries
-    df = df.tail(500)
-    df.to_csv(CSV_DATA, index=False)
+    get_new_data = False
 
-    df = calculate_ema(df)
+    if get_new_data == True:
+        # get new data
+        get_data = fetch_csv_data(50)
+        new_df_filtered = get_data[~get_data["time"].isin(df["time"])]
+        df = pd.concat([df, new_df_filtered], ignore_index=True)
+
+        # keep only the last 500 entries
+        df = df.tail(500)
+        df.to_csv(CSV_DATA, index=False)
+
+    df = calculate_ema(df, period=100)
 
     df = to_heikin_ashi(df)
 
     df = prepare_mpf(df)
+
+    signal = df.tail(1)["signal"].iloc[0]
+
+    print(f"SIGNAL: {signal}")
 
     # retain chart info for only the last 2 weeks
     df = df.tail(336)
