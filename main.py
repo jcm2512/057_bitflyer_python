@@ -100,11 +100,11 @@ def fetch_ohlcv_using_cryptocompare(limit=100):
         return None
 
 
-def calculate_ema(df, period=PERIOD, column="close"):
+def calculate_ema(df, period=PERIOD, column="Close"):
     df = df.copy()
-    df["ema"] = df[column].ewm(span=period, adjust=False).mean()
-    df["signal"] = (
-        df["ema"].diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
+    df["EMA"] = df[column].ewm(span=period, adjust=False).mean()
+    df["Signal"] = (
+        df["EMA"].diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
     )
     return df
 
@@ -112,7 +112,17 @@ def calculate_ema(df, period=PERIOD, column="close"):
 def fetch_csv_data(limit=100):
     data_array = fetch_ohlcv_using_cryptocompare(limit)["Data"]["Data"]
     df = pd.DataFrame(data_array)
-    df = df[["time", "close", "high", "low", "open"]]
+    df = df[["Time", "Close", "High", "Low", "open"]]
+    df.rename(
+        columns={
+            "time": "Time",
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+        },
+        inplace=True,
+    )
     return df
 
 
@@ -126,23 +136,23 @@ def to_heikin_ashi(df):
     ha_df = df.copy()
 
     # Calculate Heikin-Ashi values
-    ha_df["HA_Close"] = (df["open"] + df["high"] + df["low"] + df["close"]) / 4
+    ha_df["HA_Close"] = (df["Open"] + df["High"] + df["Low"] + df["Close"]) / 4
     ha_df["HA_Open"] = np.nan
-    ha_df.loc[ha_df.index[0], "HA_Open"] = df.loc[ha_df.index[0], "open"]
+    ha_df.loc[ha_df.index[0], "HA_Open"] = df.loc[ha_df.index[0], "Open"]
     for i in range(1, len(ha_df)):
         ha_df.loc[ha_df.index[i], "HA_Open"] = (
             ha_df.loc[ha_df.index[i - 1], "HA_Open"]
             + ha_df.loc[ha_df.index[i - 1], "HA_Close"]
         ) / 2
 
-    ha_df["HA_High"] = ha_df[["high", "HA_Open", "HA_Close"]].max(axis=1)
-    ha_df["HA_Low"] = ha_df[["low", "HA_Open", "HA_Close"]].min(axis=1)
+    ha_df["HA_High"] = ha_df[["High", "HA_Open", "HA_Close"]].max(axis=1)
+    ha_df["HA_Low"] = ha_df[["Low", "HA_Open", "HA_Close"]].min(axis=1)
 
-    # Keep the original columns and replace open, high, low, close
-    ha_df["open"] = ha_df["HA_Open"]
-    ha_df["high"] = ha_df["HA_High"]
-    ha_df["low"] = ha_df["HA_Low"]
-    ha_df["close"] = ha_df["HA_Close"]
+    # Keep the original columns and replace open, High, Low, Close
+    ha_df["Open"] = ha_df["HA_Open"]
+    ha_df["High"] = ha_df["HA_High"]
+    ha_df["Low"] = ha_df["HA_Low"]
+    ha_df["Close"] = ha_df["HA_Close"]
 
     # Drop the temporary HA columns
     ha_df.drop(columns=["HA_Open", "HA_High", "HA_Low", "HA_Close"], inplace=True)
@@ -154,19 +164,8 @@ def to_heikin_ashi(df):
 
 def prepare_mpf(df):
     # Convert to datetime and then to JST
-    df["time"] = pd.to_datetime(df["time"], unit="s")
-    df["time"] = df["time"].dt.tz_localize("UTC").dt.tz_convert(JST)
-
-    # Rename columns to match mplfinance requirements
-    df.rename(
-        columns={
-            "open": "Open",
-            "high": "High",
-            "low": "Low",
-            "close": "Close",
-        },
-        inplace=True,
-    )
+    df["Time"] = pd.to_datetime(df["Time"], unit="s")
+    df["Time"] = df["Time"].dt.tz_localize("UTC").dt.tz_convert(JST)
 
     return df
 
@@ -175,14 +174,14 @@ def mpf_plot(df, range=200):
     print("Generating CandleStick plot...")
 
     # Set the 'time' column as the index
-    df.set_index("time", inplace=True)
+    df.set_index("Time", inplace=True)
 
     # Create the plot and return the figure and list of axes objects
     fig, axes = mpf.plot(
         df[-range:],
         type="candle",
         style="charles",
-        addplot=mpf.make_addplot(df["ema"][-range:], color="blue"),
+        addplot=mpf.make_addplot(df["EMA"][-range:], color="blue"),
         title="Candlestick Chart",
         ylabel="Price",
         returnfig=True,  # Return the figure and axes objects for further customization
@@ -198,6 +197,12 @@ def mpf_plot(df, range=200):
     print(f"CandleStick plot saved as {MPF_PLOT}")
 
 
+def generate_signals(df):
+    get_values = df.tail(3)["Close"]
+    print(f"get_values: {get_values}")
+    return df
+
+
 if __name__ == "__main__":
     print("Starting script...")
     df = pd.read_csv(CSV_DATA)
@@ -207,7 +212,7 @@ if __name__ == "__main__":
     if get_new_data == True:
         # get new data
         get_data = fetch_csv_data(50)
-        new_df_filtered = get_data[~get_data["time"].isin(df["time"])]
+        new_df_filtered = get_data[~get_data["Time"].isin(df["Time"])]
         df = pd.concat([df, new_df_filtered], ignore_index=True)
 
         # keep only the last 500 entries
@@ -218,9 +223,11 @@ if __name__ == "__main__":
 
     df = to_heikin_ashi(df)
 
+    generate_signals(df)
+
     df = prepare_mpf(df)
 
-    signal = df.tail(1)["signal"].iloc[0]
+    signal = df.tail(1)["Signal"].iloc[0]
 
     print(f"SIGNAL: {signal}")
 
