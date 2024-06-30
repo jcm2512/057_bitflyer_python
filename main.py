@@ -26,8 +26,20 @@ OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local_docs")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 CSV_DATA = os.path.join(OUTPUT_DIR, "data.csv")
+HA_DATA = os.path.join(OUTPUT_DIR, "heikin_ashi.csv")
+SMA_DATA = os.path.join(OUTPUT_DIR, "sma_data.csv")
+EMA_DATA = os.path.join(OUTPUT_DIR, "ema_data.csv")
+EMA_DATA2 = os.path.join(OUTPUT_DIR, "ema_data_before.csv")
+
+
+MPF_PLOT = os.path.join(OUTPUT_DIR, "candlestick_plot.png")
 
 JST = timezone("Asia/Tokyo")
+
+CHART_SPAN = 500
+PERIOD = 200
+
+TYPE = "ema"
 
 matplotlib.use("Agg")
 
@@ -71,8 +83,8 @@ def get_balance(currency_code):
             return format(balance["amount"], ".8f")
 
 
-def fetch_ohlcv_using_cryptocompare():
-    url = "https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=JPY&limit=100&e=Bitflyer"
+def fetch_ohlcv_using_cryptocompare(limit=100):
+    url = f"https://min-api.cryptocompare.com/data/v2/histohour?fsym=BTC&tsym=JPY&limit={limit}&e=Bitflyer"
     headers = {"authorization": CRYPTOCOMPARE_API_KEY}
 
     response = requests.get(url, headers=headers)
@@ -90,88 +102,71 @@ def fetch_ohlcv_using_cryptocompare():
         return None
 
 
-def update_csv_data():
-    data_array = fetch_ohlcv_using_cryptocompare()["Data"]["Data"]
+def calculate_sma(df, period=PERIOD, column="close"):
+    sma = df.copy()
+    sma["sma"] = df[column].rolling(window=period).mean()
+    return sma
+
+
+def calculate_ema(df, period=PERIOD, column="close"):
+    df = df.copy()
+    df["ema"] = df[column].ewm(span=period, adjust=False).mean()
+    df["signal"] = (
+        df["ema"]
+        .diff()
+        .apply(lambda x: "UP" if x > 0 else ("DOWN" if x < 0 else "FLAT"))
+    )
+    return df
+
+
+def fetch_csv_data(limit=100):
+    data_array = fetch_ohlcv_using_cryptocompare(limit)["Data"]["Data"]
     df = pd.DataFrame(data_array)
+    df = df[["time", "close", "high", "low", "open"]]
 
     df.to_csv(CSV_DATA, index=False)
 
 
+def update_csv_data(df, output):
+    df.to_csv(output, index=False)
+    return df
+
+
 def to_heikin_ashi(df):
+
     ha_df = df.copy()
 
     # Calculate Heikin-Ashi values
-    ha_df["HA_Close"] = (df["Open"] + df["High"] + df["Low"] + df["Close"]) / 4
+    ha_df["HA_Close"] = (df["open"] + df["high"] + df["low"] + df["close"]) / 4
     ha_df["HA_Open"] = np.nan
-    ha_df.loc[ha_df.index[0], "HA_Open"] = df.loc[ha_df.index[0], "Open"]
+    ha_df.loc[ha_df.index[0], "HA_Open"] = df.loc[ha_df.index[0], "open"]
     for i in range(1, len(ha_df)):
         ha_df.loc[ha_df.index[i], "HA_Open"] = (
             ha_df.loc[ha_df.index[i - 1], "HA_Open"]
             + ha_df.loc[ha_df.index[i - 1], "HA_Close"]
         ) / 2
 
-    ha_df["HA_High"] = ha_df[["High", "HA_Open", "HA_Close"]].max(axis=1)
-    ha_df["HA_Low"] = ha_df[["Low", "HA_Open", "HA_Close"]].min(axis=1)
+    ha_df["HA_High"] = ha_df[["high", "HA_Open", "HA_Close"]].max(axis=1)
+    ha_df["HA_Low"] = ha_df[["low", "HA_Open", "HA_Close"]].min(axis=1)
 
-    ha_df = ha_df[["HA_Open", "HA_High", "HA_Low", "HA_Close"]]
+    # Keep the original columns and replace open, high, low, close
+    ha_df["open"] = ha_df["HA_Open"]
+    ha_df["high"] = ha_df["HA_High"]
+    ha_df["low"] = ha_df["HA_Low"]
+    ha_df["close"] = ha_df["HA_Close"]
 
-    ha_df.rename(
-        columns={
-            "HA_Open": "Open",
-            "HA_High": "High",
-            "HA_Low": "Low",
-            "HA_Close": "Close",
-        },
-        inplace=True,
-    )
+    # Drop the temporary HA columns
+    ha_df.drop(columns=["HA_Open", "HA_High", "HA_Low", "HA_Close"], inplace=True)
+
+    ha_df.to_csv(HA_DATA, index=False)
 
     return ha_df
 
 
-def convert_to_jst(df, time_column):
+def prepare_mpf(df):
     # Convert to datetime and then to JST
-    df[time_column] = pd.to_datetime(df[time_column], unit="s")
-    df[time_column] = df[time_column].dt.tz_localize("UTC").dt.tz_convert(JST)
-    return df
-
-
-def simple_plot():
-    print("Generating simple plot...")
-
-    df = pd.read_csv(CSV_DATA)
-
-    df = convert_to_jst(df, "time")
-
-    # Plot the data
-    plt.figure(figsize=(10, 6))
-
-    # Plot the 'close', 'high', and 'low' prices over time
-    plt.plot(df["time"], df["close"], label="Close Price")
-    plt.plot(df["time"], df["high"], label="High Price", linestyle="--")
-    plt.plot(df["time"], df["low"], label="Low Price", linestyle=":")
-
-    # Adding titles and labels
-    plt.title("Prices Over Time")
-    plt.xlabel("Time")
-    plt.ylabel("Price")
-    plt.legend()
-
-    plt.xticks(rotation=45)
-    plt.ticklabel_format(style="plain", axis="y")
-
-    plot_file_name = os.path.join(OUTPUT_DIR, "plot.png")
-    plt.savefig(plot_file_name)
-    print(f"Simple plot saved as {plot_file_name}")
-
-
-def mpf_plot():
-    print("Generating CandleStick plot...")
-
-    df = pd.read_csv(CSV_DATA)
-    df = convert_to_jst(df, "time")
-
-    # Set the 'time' column as the index
-    df.set_index("time", inplace=True)
+    df["time"] = pd.to_datetime(df["time"], unit="s")
+    df["time"] = df["time"].dt.tz_localize("UTC").dt.tz_convert(JST)
 
     # Rename columns to match mplfinance requirements
     df.rename(
@@ -184,15 +179,21 @@ def mpf_plot():
         inplace=True,
     )
 
-    ha_df = to_heikin_ashi(df)
-    # Save the plot to a file
-    plot_file_name = os.path.join(OUTPUT_DIR, "candlestick_plot.png")
+    return df
+
+
+def mpf_plot(df, range=200):
+    print("Generating CandleStick plot...")
+
+    # Set the 'time' column as the index
+    df.set_index("time", inplace=True)
 
     # Create the plot and return the figure and list of axes objects
     fig, axes = mpf.plot(
-        ha_df,
+        df[-range:],
         type="candle",
         style="charles",
+        addplot=mpf.make_addplot(df[TYPE][-range:], color="blue"),
         title="Candlestick Chart",
         ylabel="Price",
         returnfig=True,  # Return the figure and axes objects for further customization
@@ -204,13 +205,27 @@ def mpf_plot():
     axes[0].yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:,.0f}"))
 
     # Save the figure to a file
-    fig.savefig(plot_file_name)
-    print(f"CandleStick plot saved as {plot_file_name}")
+    fig.savefig(MPF_PLOT)
+    print(f"CandleStick plot saved as {MPF_PLOT}")
 
 
 if __name__ == "__main__":
     print("Starting script...")
-    update_csv_data()
-    simple_plot()
-    mpf_plot()
+    # fetch_csv_data(500)
+    df = pd.read_csv(CSV_DATA)
+    if TYPE == "sma":
+        df = calculate_sma(df)
+    elif TYPE == "ema":
+        df = calculate_ema(df)
+
+    df = to_heikin_ashi(df)
+
+    update_csv_data(df, EMA_DATA2)
+
+    df = prepare_mpf(df)
+
+    update_csv_data(df, EMA_DATA)
+
+    mpf_plot(df, range=CHART_SPAN)
+
     print("Script finished.")
