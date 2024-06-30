@@ -39,8 +39,6 @@ JST = timezone("Asia/Tokyo")
 CHART_SPAN = 500
 PERIOD = 200
 
-TYPE = "ema"
-
 matplotlib.use("Agg")
 
 
@@ -102,12 +100,6 @@ def fetch_ohlcv_using_cryptocompare(limit=100):
         return None
 
 
-def calculate_sma(df, period=PERIOD, column="close"):
-    sma = df.copy()
-    sma["sma"] = df[column].rolling(window=period).mean()
-    return sma
-
-
 def calculate_ema(df, period=PERIOD, column="close"):
     df = df.copy()
     df["ema"] = df[column].ewm(span=period, adjust=False).mean()
@@ -123,8 +115,7 @@ def fetch_csv_data(limit=100):
     data_array = fetch_ohlcv_using_cryptocompare(limit)["Data"]["Data"]
     df = pd.DataFrame(data_array)
     df = df[["time", "close", "high", "low", "open"]]
-
-    df.to_csv(CSV_DATA, index=False)
+    return df
 
 
 def update_csv_data(df, output):
@@ -193,7 +184,7 @@ def mpf_plot(df, range=200):
         df[-range:],
         type="candle",
         style="charles",
-        addplot=mpf.make_addplot(df[TYPE][-range:], color="blue"),
+        addplot=mpf.make_addplot(df["ema"][-range:], color="blue"),
         title="Candlestick Chart",
         ylabel="Price",
         returnfig=True,  # Return the figure and axes objects for further customization
@@ -211,21 +202,27 @@ def mpf_plot(df, range=200):
 
 if __name__ == "__main__":
     print("Starting script...")
-    # fetch_csv_data(500)
     df = pd.read_csv(CSV_DATA)
-    if TYPE == "sma":
-        df = calculate_sma(df)
-    elif TYPE == "ema":
-        df = calculate_ema(df)
+    get_data = fetch_csv_data(50)
+    new_df_filtered = get_data[~get_data["time"].isin(df["time"])]
+    df = pd.concat([df, new_df_filtered], ignore_index=True)
+
+    # keep only the last 500 entries
+    df = df.tail(500)
+    df.to_csv(CSV_DATA, index=False)
+
+    df = calculate_ema(df)
 
     df = to_heikin_ashi(df)
 
-    update_csv_data(df, EMA_DATA2)
-
     df = prepare_mpf(df)
 
-    update_csv_data(df, EMA_DATA)
+    # retain chart info for only the last 2 weeks
+    df = df.tail(336)
 
-    mpf_plot(df, range=CHART_SPAN)
+    df.to_csv(EMA_DATA, index=False)
+
+    # plot chart for 2 weeks
+    mpf_plot(df, range=336)
 
     print("Script finished.")
