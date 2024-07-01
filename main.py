@@ -223,7 +223,7 @@ if __name__ == "__main__":
         df = df.tail(500)
         df.to_csv(CSV_DATA, index=False)
 
-    df = calculate_ema(df, period=100)
+    df = calculate_ema(df, period=50)
 
     df = to_heikin_ashi(df)
 
