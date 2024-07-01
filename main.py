@@ -251,10 +251,10 @@ if __name__ == "__main__":
 
     df.to_csv(EMA_DATA, index=False)
 
-    # plot chart for 2 weeks
-    mpf_plot(df, range=CHART_DURATION)
-
     position = place_order(ema_signal, buy_signal, ltp, bal_JPY)
+
+    # plot chart for 2 weeks
+    mpf_plot(df, range=CHART_DURATION, position=position)
 
     if EMA_TESTS:
         for ema_duration in range(50, 250, 50):
