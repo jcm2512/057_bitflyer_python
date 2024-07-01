@@ -172,7 +172,7 @@ def generate_signal(df):
     return 0
 
 
-def place_order(ema_signal, buy_signal, ltp, bal):
+def place_order(ema_signal, buy_signal, ltp, bal, bal_BTC):
     if ema_signal == 1 and buy_signal == 1:
         if is_valid_order(ltp, bal):
             print("Let's BUY")
@@ -181,8 +181,8 @@ def place_order(ema_signal, buy_signal, ltp, bal):
             print("Exiting Trade --Not enough funds")
         return "BUY"
     elif buy_signal == -1:
-        if is_valid_sell(ltp, bal):
-            simulate_sell()
+        if is_valid_sell(ltp, bal_BTC):
+            # need to fix this line simulate_sell()
             create_order("BTC_JPY", (bal_BTC * 0.99), "SELL")
             print("Let's SELL")
         else:
@@ -251,7 +251,7 @@ if __name__ == "__main__":
 
     df.to_csv(EMA_DATA, index=False)
 
-    position = place_order(ema_signal, buy_signal, ltp, bal_JPY)
+    position = place_order(ema_signal, buy_signal, ltp, bal_JPY, bal_BTC)
 
     # plot chart for 2 weeks
     mpf_plot(df, range=CHART_DURATION, position=position)
