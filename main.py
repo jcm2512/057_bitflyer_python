@@ -7,7 +7,15 @@ import matplotlib.ticker as ticker
 from pytz import timezone
 from dotenv import load_dotenv
 
-from bitflyer_actions import get_balance, is_valid_order, get_ltp
+from bitflyer_actions import (
+    get_balance,
+    is_valid_order,
+    get_ltp,
+    create_order,
+    simulate_buy,
+    simulate_sell,
+    is_valid_sell,
+)
 
 load_dotenv()
 
@@ -164,30 +172,39 @@ def generate_signal(df):
     return 0
 
 
-def purchase_order(close, bal):
-
-    return
-
-
-def place_order(ema_signal, buy_signal, btc, bal):
+def place_order(ema_signal, buy_signal, ltp, bal):
     if ema_signal == 1 and buy_signal == 1:
-        if is_valid_order(btc, bal):
+        if is_valid_order(ltp, bal):
             print("Let's BUY")
-
+            create_order("BTC_JPY", simulate_buy(bal_BTC, ltp), "BUY")
         else:
-            print("--Not enough funds to buy--")
+            print("Exiting Trade --Not enough funds")
+    elif buy_signal == -1:
+        if is_valid_sell(ltp, bal):
+            simulate_sell()
+            create_order("BTC_JPY", (bal_BTC * 0.99), "SELL")
+            print("Let's SELL")
+        else:
+            print("Exiting Trade --Too Low")
+    elif ema_signal == -1:
+        print("EMA signals BEAR market...")
+        print("Selling units to limit losses")
+        create_order("BTC_JPY", (bal_BTC * 0.99), "SELL")
+    elif buy_signal == 0:
+        print("Price fluctuating --HOLDING")
 
 
 if __name__ == "__main__":
     print("Starting script...")
 
-    bal = get_balance("JPY")
+    bal_JPY = get_balance("JPY")
+    bal_BTC = get_balance("BTC")
 
     ltp = get_ltp("BTC_JPY")
 
     print(f"Last trade price: {ltp}")
 
-    get_new_data = False
+    get_new_data = True
 
     if OUTPUT_DIR == "docs":
         get_new_data = True
@@ -219,7 +236,7 @@ if __name__ == "__main__":
 
     ema_signal = df.tail(1)["Signal"].iloc[0]
     buy_signal = generate_signal(df)
-    close = df["Close"].tail(1).values[0]
+    # close = df["Close"].tail(1).values[0]
 
     print(f"EMA Signal: {ema_signal}")
 
@@ -233,7 +250,7 @@ if __name__ == "__main__":
     # plot chart for 2 weeks
     mpf_plot(df, range=CHART_DURATION)
 
-    place_order(ema_signal, buy_signal, ltp, bal)
+    place_order(ema_signal, buy_signal, ltp, bal_JPY)
 
     if EMA_TESTS:
         for ema_duration in range(50, 250, 50):
@@ -243,7 +260,7 @@ if __name__ == "__main__":
             df = prepare_mpf(df)
             ema_signal = df.tail(1)["Signal"].iloc[0]
             buy_signal = generate_signal(df)
-            close = df["Close"].tail(1).values[0]
+            # close = df["Close"].tail(1).values[0]
             mpf_plot(df, range=CHART_DURATION, ema_tests=EMA_TESTS, period=ema_duration)
 
     print("Script finished.")
