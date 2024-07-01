@@ -16,7 +16,7 @@ EMA_TESTS = True
 COIN_API_KEY = os.getenv("COIN_API_KEY")
 CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
 
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local")
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local_docs")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 CSV_DATA = os.path.join(OUTPUT_DIR, "data.csv")
@@ -189,7 +189,7 @@ if __name__ == "__main__":
 
     get_new_data = False
 
-    if OUTPUT_DIR == "remote":
+    if OUTPUT_DIR == "docs":
         get_new_data = True
         EMA_TESTS = False
 
