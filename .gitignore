@@ -6,3 +6,7 @@
 
 # Local Working Directory
 local_docs/
+
+# Python 
+__pycache__/
+*.pyc
