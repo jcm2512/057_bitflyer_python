@@ -1,28 +1,22 @@
 import os
-import time
-import hashlib
-import hmac
 import requests
-import matplotlib
 import mplfinance as mpf
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from pytz import timezone
-from datetime import datetime
 from dotenv import load_dotenv
+
+from bitflyer_actions import get_balance, is_valid_order, get_ltp
 
 load_dotenv()
 
-API_KEY = os.getenv("API_KEY")
-API_SECRET = os.getenv("API_SECRET")
+EMA_TESTS = True
+
 COIN_API_KEY = os.getenv("COIN_API_KEY")
 CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
 
-URL = "https://api.bitflyer.com"
-
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local_docs")
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 CSV_DATA = os.path.join(OUTPUT_DIR, "data.csv")
@@ -31,54 +25,15 @@ SMA_DATA = os.path.join(OUTPUT_DIR, "sma_data.csv")
 EMA_DATA = os.path.join(OUTPUT_DIR, "ema_data.csv")
 EMA_DATA2 = os.path.join(OUTPUT_DIR, "ema_data_before.csv")
 
+JST = timezone("Asia/Tokyo")
+EMA_PERIOD = 50
+
+ENTRIES_PER_UPDATE = 50
+MAX_ENTRIES = 500
+
+CHART_DURATION = 336  # 2 Weeks (336 hours)
 
 MPF_PLOT = os.path.join(OUTPUT_DIR, "candlestick_plot.png")
-
-JST = timezone("Asia/Tokyo")
-
-CHART_SPAN = 500
-PERIOD = 100
-
-matplotlib.use("Agg")
-
-
-def get_headers(api_key, api_secret, method, path, body=""):
-    TIMESTAMP = str(int(time.time()))
-
-    # Create the message to be signed
-    message = str(TIMESTAMP) + method + path + body
-
-    # Generate the HMAC-SHA256 signature and get it as a hexadecimal string
-    signature = hmac.new(
-        bytes(api_secret.encode("utf-8")),
-        bytes(message.encode("utf-8")),
-        hashlib.sha256,
-    ).hexdigest()
-
-    headers = {
-        "ACCESS-KEY": api_key,
-        "ACCESS-TIMESTAMP": TIMESTAMP,
-        "ACCESS-SIGN": signature,
-        "Content-Type": "application/json",
-    }
-    return headers
-
-
-def get_balance(currency_code):
-    method = "GET"
-    path = "/v1/me/getbalance"
-    url = URL + path
-
-    headers = get_headers(API_KEY, API_SECRET, method, path)
-    response = requests.get(url, headers=headers)
-
-    if response.status_code != 200:
-        print(f"Error: {response.status_code}")
-        print(response.text)
-
-    for balance in response.json():
-        if balance["currency_code"] == currency_code:
-            return format(balance["amount"], ".8f")
 
 
 def fetch_ohlcv_using_cryptocompare(limit=100):
@@ -100,7 +55,7 @@ def fetch_ohlcv_using_cryptocompare(limit=100):
         return None
 
 
-def calculate_ema(df, period=PERIOD, column="Close"):
+def calculate_ema(df, period, column="Close"):
     df = df.copy()
     df["EMA"] = df[column].ewm(span=period, adjust=False).mean()
     df["Signal"] = (
@@ -171,9 +126,7 @@ def prepare_mpf(df):
     return df
 
 
-def mpf_plot(df, range=200):
-    print("Generating CandleStick plot...")
-
+def mpf_plot(df, range, ema_tests=False, period=EMA_PERIOD):
     # Set the 'time' column as the index
     df.set_index("Time", inplace=True)
 
@@ -194,47 +147,83 @@ def mpf_plot(df, range=200):
     axes[0].yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:,.0f}"))
 
     # Save the figure to a file
-    fig.savefig(MPF_PLOT)
-    print(f"CandleStick plot saved as {MPF_PLOT}")
+    if not ema_tests:
+        fig.savefig(MPF_PLOT)
+
+    fig.savefig(os.path.join(OUTPUT_DIR, f"EMA-{period}"))
 
 
-def generate_signals(df):
-    get_values = df.tail(3)["Close"]
-    print(f"get_values: {get_values}")
-    return df
+def generate_signal(df):
+    if len(df) < 3:
+        return 0
+    x, y, z = df["Close"].tail(3).values
+    if x < y < z:
+        return 1
+    elif x > y > z:
+        return -1
+    return 0
+
+
+def purchase_order(close, bal):
+
+    return
+
+
+def place_order(ema_signal, buy_signal, btc, bal):
+    if ema_signal == 1 and buy_signal == 1:
+        if is_valid_order(btc, bal):
+            print("Let's BUY")
+
+        else:
+            print("--Not enough funds to buy--")
 
 
 if __name__ == "__main__":
     print("Starting script...")
-    df = pd.read_csv(CSV_DATA)
+
+    bal = get_balance("JPY")
+
+    ltp = get_ltp("BTC_JPY")
+
+    print(f"Last trade price: {ltp}")
 
     get_new_data = False
 
-    # Always get new data if running remotely
-    if OUTPUT_DIR == "docs":
+    if OUTPUT_DIR == "remote":
         get_new_data = True
+        EMA_TESTS = False
 
     if get_new_data == True:
-        # get new data
-        get_data = fetch_csv_data(100)
-        new_df_filtered = get_data[~get_data["Time"].isin(df["Time"])]
-        df = pd.concat([df, new_df_filtered], ignore_index=True)
+        try:
+            df = pd.read_csv(CSV_DATA)
+            get_data = fetch_csv_data(ENTRIES_PER_UPDATE)
+            new_df_filtered = get_data[~get_data["Time"].isin(df["Time"])]
+            df = pd.concat([df, new_df_filtered], ignore_index=True)
+        except:
+            df = fetch_csv_data(MAX_ENTRIES)
 
         # Limit the number of entries kept on record
         df = df.tail(MAX_ENTRIES)
         df.to_csv(CSV_DATA, index=False)
+    else:
+        try:
+            df = pd.read_csv(CSV_DATA)
+        except:
+            print("Error: Could not find CSV data")
 
-    df = calculate_ema(df, period=50)
+    df = calculate_ema(df, period=EMA_PERIOD)
 
     df = to_heikin_ashi(df)
 
-    generate_signals(df)
-
     df = prepare_mpf(df)
 
-    signal = df.tail(1)["Signal"].iloc[0]
+    ema_signal = df.tail(1)["Signal"].iloc[0]
+    buy_signal = generate_signal(df)
+    close = df["Close"].tail(1).values[0]
 
-    print(f"SIGNAL: {signal}")
+    print(f"EMA Signal: {ema_signal}")
+
+    print(f"BUY Signal: {buy_signal}")
 
     # retain chart info for only the last 2 weeks
     df = df.tail(CHART_DURATION)
@@ -243,5 +232,18 @@ if __name__ == "__main__":
 
     # plot chart for 2 weeks
     mpf_plot(df, range=CHART_DURATION)
+
+    place_order(ema_signal, buy_signal, ltp, bal)
+
+    if EMA_TESTS:
+        for ema_duration in range(50, 250, 50):
+            df = pd.read_csv(CSV_DATA)
+            df = calculate_ema(df, period=ema_duration)
+            df = to_heikin_ashi(df)
+            df = prepare_mpf(df)
+            ema_signal = df.tail(1)["Signal"].iloc[0]
+            buy_signal = generate_signal(df)
+            close = df["Close"].tail(1).values[0]
+            mpf_plot(df, range=CHART_DURATION, ema_tests=EMA_TESTS, period=ema_duration)
 
     print("Script finished.")
