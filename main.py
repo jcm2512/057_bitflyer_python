@@ -215,7 +215,7 @@ if __name__ == "__main__":
     
     if get_new_data == True:
         # get new data
-        get_data = fetch_csv_data(50)
+        get_data = fetch_csv_data(500)
         new_df_filtered = get_data[~get_data["Time"].isin(df["Time"])]
         df = pd.concat([df, new_df_filtered], ignore_index=True)
 
