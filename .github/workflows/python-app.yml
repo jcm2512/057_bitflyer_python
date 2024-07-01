@@ -51,7 +51,7 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add remote/
+          git add docs/
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Update generated images"
             git push
