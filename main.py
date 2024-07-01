@@ -209,6 +209,10 @@ if __name__ == "__main__":
 
     get_new_data = False
 
+    # Always get new data if running remotely
+    if OUTPUT_DIR == "docs":
+        get_new_data = True
+    
     if get_new_data == True:
         # get new data
         get_data = fetch_csv_data(50)
