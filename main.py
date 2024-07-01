@@ -11,10 +11,12 @@ from bitflyer_actions import get_balance, is_valid_order, get_btc_jpy_price
 
 load_dotenv()
 
+EMA_TESTS = True
+
 COIN_API_KEY = os.getenv("COIN_API_KEY")
 CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
 
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local_docs")
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 CSV_DATA = os.path.join(OUTPUT_DIR, "data.csv")
@@ -24,7 +26,12 @@ EMA_DATA = os.path.join(OUTPUT_DIR, "ema_data.csv")
 EMA_DATA2 = os.path.join(OUTPUT_DIR, "ema_data_before.csv")
 
 JST = timezone("Asia/Tokyo")
-PERIOD = 100
+EMA_PERIOD = 50
+
+ENTRIES_PER_UPDATE = 50
+MAX_ENTRIES = 500
+
+CHART_DURATION = 336  # 2 Weeks (336 hours)
 
 MPF_PLOT = os.path.join(OUTPUT_DIR, "candlestick_plot.png")
 
@@ -48,7 +55,7 @@ def fetch_ohlcv_using_cryptocompare(limit=100):
         return None
 
 
-def calculate_ema(df, period=100, column="Close"):
+def calculate_ema(df, period, column="Close"):
     df = df.copy()
     df["EMA"] = df[column].ewm(span=period, adjust=False).mean()
     df["Signal"] = (
@@ -57,7 +64,8 @@ def calculate_ema(df, period=100, column="Close"):
     return df
 
 
-def fetch_csv_data(limit=100):
+def fetch_csv_data(limit):
+    print(f"Retrieving {ENTRIES_PER_UPDATE} entries from CryptoCompare")
     data_array = fetch_ohlcv_using_cryptocompare(limit)["Data"]["Data"]
     df = pd.DataFrame(data_array)
     df = df[["time", "close", "high", "low", "open"]]
@@ -118,7 +126,7 @@ def prepare_mpf(df):
     return df
 
 
-def mpf_plot(df, range=200):
+def mpf_plot(df, range, ema_tests=False, period=EMA_PERIOD):
     # Set the 'time' column as the index
     df.set_index("Time", inplace=True)
 
@@ -128,7 +136,7 @@ def mpf_plot(df, range=200):
         type="candle",
         style="charles",
         addplot=mpf.make_addplot(df["EMA"][-range:], color="blue"),
-        title="Candlestick Chart",
+        title=f"{period}-HOUR EMA",
         ylabel="Price",
         returnfig=True,  # Return the figure and axes objects for further customization
         tight_layout=False,
@@ -139,7 +147,10 @@ def mpf_plot(df, range=200):
     axes[0].yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:,.0f}"))
 
     # Save the figure to a file
-    fig.savefig(MPF_PLOT)
+    if not ema_tests:
+        fig.savefig(MPF_PLOT)
+
+    fig.savefig(os.path.join(OUTPUT_DIR, f"EMA-{period}"))
 
 
 def generate_signal(df):
@@ -178,17 +189,20 @@ if __name__ == "__main__":
 
     get_new_data = False
 
+    if OUTPUT_DIR == "remote":
+        get_new_data = True
+
     if get_new_data == True:
         try:
             df = pd.read_csv(CSV_DATA)
-            get_data = fetch_csv_data(50)
+            get_data = fetch_csv_data(ENTRIES_PER_UPDATE)
             new_df_filtered = get_data[~get_data["Time"].isin(df["Time"])]
             df = pd.concat([df, new_df_filtered], ignore_index=True)
         except:
-            df = fetch_csv_data(50)
+            df = fetch_csv_data(MAX_ENTRIES)
 
-        # keep only the last 500 entries
-        df = df.tail(500)
+        # Limit the number of entries kept on record
+        df = df.tail(MAX_ENTRIES)
         df.to_csv(CSV_DATA, index=False)
     else:
         try:
@@ -196,7 +210,7 @@ if __name__ == "__main__":
         except:
             print("Error: Could not find CSV data")
 
-    df = calculate_ema(df, period=100)
+    df = calculate_ema(df, period=EMA_PERIOD)
 
     df = to_heikin_ashi(df)
 
@@ -211,13 +225,24 @@ if __name__ == "__main__":
     print(f"BUY Signal: {buy_signal}")
 
     # retain chart info for only the last 2 weeks
-    df = df.tail(336)
+    df = df.tail(CHART_DURATION)
 
     df.to_csv(EMA_DATA, index=False)
 
     # plot chart for 2 weeks
-    mpf_plot(df, range=336)
+    mpf_plot(df, range=CHART_DURATION)
 
     place_order(ema_signal, buy_signal, ltp, bal)
+
+    if EMA_TESTS:
+        for ema_duration in range(50, 250, 50):
+            df = pd.read_csv(CSV_DATA)
+            df = calculate_ema(df, period=ema_duration)
+            df = to_heikin_ashi(df)
+            df = prepare_mpf(df)
+            ema_signal = df.tail(1)["Signal"].iloc[0]
+            buy_signal = generate_signal(df)
+            close = df["Close"].tail(1).values[0]
+            mpf_plot(df, range=CHART_DURATION, ema_tests=EMA_TESTS, period=ema_duration)
 
     print("Script finished.")

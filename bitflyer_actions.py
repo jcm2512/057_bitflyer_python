@@ -13,6 +13,7 @@ API_SECRET = os.getenv("API_SECRET")
 URL = "https://api.bitflyer.com"
 
 MIN_ORDER = 0.001
+FEE = 0.001
 
 
 def get_headers(api_key, api_secret, method, path, body=""):
@@ -54,8 +55,7 @@ def get_balance(currency_code):
             return format(balance["amount"], ".8f")
 
 
-def is_valid_order(close, bal):
-    fee = 1.001
+def is_valid_order(close, bal, fee=FEE):
     is_enough = float(bal) / (close * fee)
     if is_enough > MIN_ORDER:
         return True
@@ -76,3 +76,7 @@ def get_btc_jpy_price():
         print(f"Error: {response.status_code}")
         print(response.text)
         return None
+
+
+def sell():
+    return
