@@ -3,6 +3,7 @@ import time
 import hashlib
 import hmac
 import requests
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -78,10 +79,41 @@ def get_ltp(currency_pair="BTC_JPY"):
         return None
 
 
-def sell(bal):
-    return bal
+def simulate_sell(bal, ltp, fee=FEE):
+    print(f"Balance: {float(bal)}")
+    rounded_bal = round(float(bal), 3)
+    sub_total = int(rounded_bal * float(ltp))
+    total = int(sub_total - (sub_total * fee))
+
+    print(f"Rounded Balance: {float(rounded_bal)}")
+    print(f"Last Trade Price: {int(ltp)}")
+    print(f"Total Sale Amount: {total} YEN")
+
+
+def market_sell(product_code, size):
+    method = "POST"
+    path = "/v1/me/sendchildorder"
+    url = URL + path
+
+    body = {
+        "product_code": product_code,
+        "child_order_type": "MARKET",
+        "side": "SELL",
+        "size": size,
+    }
+    body_json = json.dumps(body)
+
+    headers = get_headers(API_KEY, API_SECRET, method, path, body_json)
+    response = requests.post(url, headers=headers, data=body_json)
+
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+
+    return response.json()
 
 
 if __name__ == "__main__":
-    output = sell(get_balance("ETH"))
-    print(output)
+    # simulate_sell(bal=get_balance("ETH"), ltp=get_ltp("ETH_JPY"))
+    market_sell("ETH_JPY", round(float(get_balance("ETH")), 3))
