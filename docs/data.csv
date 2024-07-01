@@ -1,4 +1,4 @@
-time,close,high,low,open,volumefrom,volumeto,conversionType,conversionSymbol
+Time,Close,High,Low,Open,VolumeFrom,VolumeTo,ConversionType,ConversionSymbol
 1719388800,9853814,9888888,9834557,9887458,29.78,293377329.07,force_direct,
 1719392400,9839385,9863594,9830200,9853814,17.33,170598705.66,force_direct,
 1719396000,9834158,9844147,9805988,9839385,24.0,235703217.97,force_direct,
