@@ -62,9 +62,9 @@ def is_valid_order(close, bal, fee=FEE):
     return False
 
 
-def get_btc_jpy_price():
+def get_ltp(currency_pair="BTC_JPY"):
     path = "/v1/ticker"
-    params = {"product_code": "BTC_JPY"}
+    params = {"product_code": currency_pair}
     url = URL + path
 
     response = requests.get(url, params=params)
@@ -78,5 +78,10 @@ def get_btc_jpy_price():
         return None
 
 
-def sell():
-    return
+def sell(bal):
+    return bal
+
+
+if __name__ == "__main__":
+    output = sell(get_balance("ETH"))
+    print(output)

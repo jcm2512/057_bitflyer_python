@@ -7,7 +7,7 @@ import matplotlib.ticker as ticker
 from pytz import timezone
 from dotenv import load_dotenv
 
-from bitflyer_actions import get_balance, is_valid_order, get_btc_jpy_price
+from bitflyer_actions import get_balance, is_valid_order, get_ltp
 
 load_dotenv()
 
@@ -183,7 +183,7 @@ if __name__ == "__main__":
 
     bal = get_balance("JPY")
 
-    ltp = get_btc_jpy_price()
+    ltp = get_ltp("BTC_JPY")
 
     print(f"Last trade price: {ltp}")
 
