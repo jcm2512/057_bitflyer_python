@@ -13,18 +13,6 @@ from pytz import timezone
 from datetime import datetime
 from dotenv import load_dotenv
 
-<<<<<<< HEAD
-from bitflyer_actions import get_balance, is_valid_order, get_ltp
-
-load_dotenv()
-
-EMA_TESTS = True
-
-COIN_API_KEY = os.getenv("COIN_API_KEY")
-CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
-
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local")
-=======
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
@@ -35,7 +23,6 @@ CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
 URL = "https://api.bitflyer.com"
 
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local_docs")
->>>>>>> parent of 3dbb8a9 (moved bitflyer functions)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 CSV_DATA = os.path.join(OUTPUT_DIR, "data.csv")
@@ -44,16 +31,6 @@ SMA_DATA = os.path.join(OUTPUT_DIR, "sma_data.csv")
 EMA_DATA = os.path.join(OUTPUT_DIR, "ema_data.csv")
 EMA_DATA2 = os.path.join(OUTPUT_DIR, "ema_data_before.csv")
 
-<<<<<<< HEAD
-JST = timezone("Asia/Tokyo")
-EMA_PERIOD = 50
-
-ENTRIES_PER_UPDATE = 50
-MAX_ENTRIES = 500
-
-CHART_DURATION = 336  # 2 Weeks (336 hours)
-=======
->>>>>>> parent of 3dbb8a9 (moved bitflyer functions)
 
 MPF_PLOT = os.path.join(OUTPUT_DIR, "candlestick_plot.png")
 
@@ -123,11 +100,7 @@ def fetch_ohlcv_using_cryptocompare(limit=100):
         return None
 
 
-<<<<<<< HEAD
-def calculate_ema(df, period, column="Close"):
-=======
 def calculate_ema(df, period=PERIOD, column="Close"):
->>>>>>> parent of 3dbb8a9 (moved bitflyer functions)
     df = df.copy()
     df["EMA"] = df[column].ewm(span=period, adjust=False).mean()
     df["Signal"] = (
@@ -198,13 +171,9 @@ def prepare_mpf(df):
     return df
 
 
-<<<<<<< HEAD
-def mpf_plot(df, range, ema_tests=False, period=EMA_PERIOD):
-=======
 def mpf_plot(df, range=200):
     print("Generating CandleStick plot...")
 
->>>>>>> parent of 3dbb8a9 (moved bitflyer functions)
     # Set the 'time' column as the index
     df.set_index("Time", inplace=True)
 
@@ -225,15 +194,8 @@ def mpf_plot(df, range=200):
     axes[0].yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:,.0f}"))
 
     # Save the figure to a file
-<<<<<<< HEAD
-    if not ema_tests:
-        fig.savefig(MPF_PLOT)
-
-    fig.savefig(os.path.join(OUTPUT_DIR, f"EMA-{period}"))
-=======
     fig.savefig(MPF_PLOT)
     print(f"CandleStick plot saved as {MPF_PLOT}")
->>>>>>> parent of 3dbb8a9 (moved bitflyer functions)
 
 
 def generate_signals(df):
@@ -244,29 +206,6 @@ def generate_signals(df):
 
 if __name__ == "__main__":
     print("Starting script...")
-<<<<<<< HEAD
-
-    bal = get_balance("JPY")
-
-    ltp = get_ltp("BTC_JPY")
-
-    print(f"Last trade price: {ltp}")
-
-    get_new_data = False
-
-    if OUTPUT_DIR == "remote":
-        get_new_data = True
-        EMA_TESTS = False
-
-    if get_new_data == True:
-        try:
-            df = pd.read_csv(CSV_DATA)
-            get_data = fetch_csv_data(ENTRIES_PER_UPDATE)
-            new_df_filtered = get_data[~get_data["Time"].isin(df["Time"])]
-            df = pd.concat([df, new_df_filtered], ignore_index=True)
-        except:
-            df = fetch_csv_data(MAX_ENTRIES)
-=======
     df = pd.read_csv(CSV_DATA)
 
     get_new_data = False
@@ -274,23 +213,18 @@ if __name__ == "__main__":
     # Always get new data if running remotely
     if OUTPUT_DIR == "docs":
         get_new_data = True
-    
+
     if get_new_data == True:
         # get new data
         get_data = fetch_csv_data(100)
         new_df_filtered = get_data[~get_data["Time"].isin(df["Time"])]
         df = pd.concat([df, new_df_filtered], ignore_index=True)
->>>>>>> parent of 3dbb8a9 (moved bitflyer functions)
 
         # Limit the number of entries kept on record
         df = df.tail(MAX_ENTRIES)
         df.to_csv(CSV_DATA, index=False)
 
-<<<<<<< HEAD
-    df = calculate_ema(df, period=EMA_PERIOD)
-=======
     df = calculate_ema(df, period=50)
->>>>>>> parent of 3dbb8a9 (moved bitflyer functions)
 
     df = to_heikin_ashi(df)
 
@@ -310,20 +244,4 @@ if __name__ == "__main__":
     # plot chart for 2 weeks
     mpf_plot(df, range=CHART_DURATION)
 
-<<<<<<< HEAD
-    place_order(ema_signal, buy_signal, ltp, bal)
-
-    if EMA_TESTS:
-        for ema_duration in range(50, 250, 50):
-            df = pd.read_csv(CSV_DATA)
-            df = calculate_ema(df, period=ema_duration)
-            df = to_heikin_ashi(df)
-            df = prepare_mpf(df)
-            ema_signal = df.tail(1)["Signal"].iloc[0]
-            buy_signal = generate_signal(df)
-            close = df["Close"].tail(1).values[0]
-            mpf_plot(df, range=CHART_DURATION, ema_tests=EMA_TESTS, period=ema_duration)
-
-=======
->>>>>>> parent of 3dbb8a9 (moved bitflyer functions)
     print("Script finished.")
