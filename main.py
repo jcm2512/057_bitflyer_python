@@ -112,7 +112,7 @@ def calculate_ema(df, period=PERIOD, column="Close"):
 def fetch_csv_data(limit=100):
     data_array = fetch_ohlcv_using_cryptocompare(limit)["Data"]["Data"]
     df = pd.DataFrame(data_array)
-    df = df[["Time", "Close", "High", "Low", "open"]]
+    df = df[["time", "close", "high", "low", "open"]]
     df.rename(
         columns={
             "time": "Time",
