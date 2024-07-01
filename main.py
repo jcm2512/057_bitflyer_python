@@ -112,7 +112,7 @@ def calculate_ema(df, period=PERIOD, column="Close"):
 def fetch_csv_data(limit=100):
     data_array = fetch_ohlcv_using_cryptocompare(limit)["Data"]["Data"]
     df = pd.DataFrame(data_array)
-    df = df[["Time", "Close", "High", "Low", "open"]]
+    df = df[["time", "close", "high", "low", "open"]]
     df.rename(
         columns={
             "time": "Time",
@@ -209,9 +209,13 @@ if __name__ == "__main__":
 
     get_new_data = False
 
+    # Always get new data if running remotely
+    if OUTPUT_DIR == "docs":
+        get_new_data = True
+    
     if get_new_data == True:
         # get new data
-        get_data = fetch_csv_data(50)
+        get_data = fetch_csv_data(100)
         new_df_filtered = get_data[~get_data["Time"].isin(df["Time"])]
         df = pd.concat([df, new_df_filtered], ignore_index=True)
 
@@ -219,7 +223,7 @@ if __name__ == "__main__":
         df = df.tail(500)
         df.to_csv(CSV_DATA, index=False)
 
-    df = calculate_ema(df, period=100)
+    df = calculate_ema(df, period=50)
 
     df = to_heikin_ashi(df)
 
