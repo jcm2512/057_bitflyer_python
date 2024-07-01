@@ -191,6 +191,7 @@ if __name__ == "__main__":
 
     if OUTPUT_DIR == "remote":
         get_new_data = True
+        EMA_TESTS = False
 
     if get_new_data == True:
         try:
