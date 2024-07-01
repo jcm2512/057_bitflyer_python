@@ -134,7 +134,7 @@ def prepare_mpf(df):
     return df
 
 
-def mpf_plot(df, range, ema_tests=False, period=EMA_PERIOD):
+def mpf_plot(df, range, ema_tests=False, period=EMA_PERIOD, position="HOLDING"):
     # Set the 'time' column as the index
     df.set_index("Time", inplace=True)
 
@@ -144,7 +144,7 @@ def mpf_plot(df, range, ema_tests=False, period=EMA_PERIOD):
         type="candle",
         style="charles",
         addplot=mpf.make_addplot(df["EMA"][-range:], color="blue"),
-        title=f"{period}-HOUR EMA",
+        title=f"{period}-HOUR EMA -- {position}",
         ylabel="Price",
         returnfig=True,  # Return the figure and axes objects for further customization
         tight_layout=False,
@@ -179,6 +179,7 @@ def place_order(ema_signal, buy_signal, ltp, bal):
             create_order("BTC_JPY", simulate_buy(bal_BTC, ltp), "BUY")
         else:
             print("Exiting Trade --Not enough funds")
+        return "BUY"
     elif buy_signal == -1:
         if is_valid_sell(ltp, bal):
             simulate_sell()
@@ -186,12 +187,15 @@ def place_order(ema_signal, buy_signal, ltp, bal):
             print("Let's SELL")
         else:
             print("Exiting Trade --Too Low")
+        return "SELL"
     elif ema_signal == -1:
         print("EMA signals BEAR market...")
         print("Selling units to limit losses")
         create_order("BTC_JPY", (bal_BTC * 0.99), "SELL")
+        return "SELL"
     elif buy_signal == 0:
         print("Price fluctuating --HOLDING")
+        return "HOLD"
 
 
 if __name__ == "__main__":
@@ -250,7 +254,7 @@ if __name__ == "__main__":
     # plot chart for 2 weeks
     mpf_plot(df, range=CHART_DURATION)
 
-    place_order(ema_signal, buy_signal, ltp, bal_JPY)
+    position = place_order(ema_signal, buy_signal, ltp, bal_JPY)
 
     if EMA_TESTS:
         for ema_duration in range(50, 250, 50):
@@ -261,6 +265,12 @@ if __name__ == "__main__":
             ema_signal = df.tail(1)["Signal"].iloc[0]
             buy_signal = generate_signal(df)
             # close = df["Close"].tail(1).values[0]
-            mpf_plot(df, range=CHART_DURATION, ema_tests=EMA_TESTS, period=ema_duration)
+            mpf_plot(
+                df,
+                range=CHART_DURATION,
+                ema_tests=EMA_TESTS,
+                period=ema_duration,
+                position=position,
+            )
 
     print("Script finished.")
