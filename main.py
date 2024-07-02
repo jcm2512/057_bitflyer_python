@@ -179,17 +179,17 @@ def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
         else:
             print("Exiting Trade --Not enough funds")
         return "BUY"
-    elif buy_signal == -1:
-        if sell_order(bal_btc, ltp):
-            sell_order(bal_btc, ltp, order=True)
-            # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
-        return "SELL"
     elif ema_signal == -1:
         print("--> EMA signals BEAR market...")
         print("--> Selling units to limit losses")
         sell_order(bal_btc, ltp, order=True, override=True)
         print(bal_btc)
         # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
+        return "SELL"
+    elif buy_signal == -1:
+        if sell_order(bal_btc, ltp):
+            sell_order(bal_btc, ltp, order=True)
+            # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
         return "SELL"
     elif buy_signal == 0:
         print("Price fluctuating --HOLDING")
