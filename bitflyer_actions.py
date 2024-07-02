@@ -63,7 +63,7 @@ def get_balance(currency_code):
 
 
 def is_valid_order(close, bal, fee=FEE):
-    is_enough = float(bal) / (close * fee)
+    is_enough = float(bal) / (close * (1 + fee))
     if is_enough > MIN_ORDER:
         return True
     return False
