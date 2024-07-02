@@ -186,7 +186,6 @@ if __name__ == "__main__":
     # size = simulate_buy(bal_JPY, ltp)
     # simulate_sell(bal_BTC, ltp)
     # simulate_buy(16130.0, 10216890)
-    simulate_sell(bal_BTC, ltp)
     # print(size)
 
     # market_sell("ETH_JPY", round(float(get_balance("ETH")), 3))

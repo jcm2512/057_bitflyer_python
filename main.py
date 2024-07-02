@@ -249,9 +249,6 @@ if __name__ == "__main__":
     buy_signal = generate_signal(df)
     # close = df["Close"].tail(1).values[0]
 
-    ema_signal = -1
-    buy_signal = 0
-
     print(f"EMA Signal: {ema_signal}")
 
     print(f"BUY Signal: {buy_signal}")
