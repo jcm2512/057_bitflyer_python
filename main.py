@@ -259,8 +259,7 @@ if __name__ == "__main__":
         ema_signal,
         buy_signal,
         get_ltp("BTC_JPY"),
-        # get_balance("JPY"),
-        "45000",
+        get_balance("JPY"),
         get_balance("BTC"),
     )
 
