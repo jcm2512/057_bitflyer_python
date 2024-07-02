@@ -9,16 +9,16 @@ from dotenv import load_dotenv
 
 from bitflyer_actions import (
     get_balance,
-    is_valid_order,
     get_ltp,
     create_order,
-    simulate_buy,
     sell_order,
+    buy_order,
 )
 
 load_dotenv()
 
 EMA_TESTS = True
+EMA_PERIOD = 50
 
 COIN_API_KEY = os.getenv("COIN_API_KEY")
 CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
@@ -33,7 +33,6 @@ EMA_DATA = os.path.join(OUTPUT_DIR, "ema_data.csv")
 EMA_DATA2 = os.path.join(OUTPUT_DIR, "ema_data_before.csv")
 
 JST = timezone("Asia/Tokyo")
-EMA_PERIOD = 50
 
 ENTRIES_PER_UPDATE = 50
 MAX_ENTRIES = 500
@@ -154,10 +153,10 @@ def mpf_plot(df, range, ema_tests=False, period=EMA_PERIOD, position="HOLDING"):
     axes[0].yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:,.0f}"))
 
     # Save the figure to a file
-    if not ema_tests:
+    if ema_tests:
+        fig.savefig(os.path.join(OUTPUT_DIR, f"EMA-{period}"))
+    else:
         fig.savefig(MPF_PLOT)
-
-    fig.savefig(os.path.join(OUTPUT_DIR, f"EMA-{period}"))
 
 
 def generate_signal(df):
@@ -173,23 +172,26 @@ def generate_signal(df):
 
 def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
     if ema_signal == 1 and buy_signal == 1:
-        if is_valid_order(bal_jpy, ltp):
-            print("Let's BUY")
-            # create_order("BTC_JPY", simulate_buy(bal_jpy, ltp), "BUY")
-        else:
-            print("Exiting Trade --Not enough funds")
+        if buy_order(bal_jpy, ltp):
+            # Order has already been rounded down within the buy_order function
+            # to allow for fluctuations in the market price
+            create_order("BTC_JPY", buy_order(bal_jpy, ltp, order=True), "BUY")
         return "BUY"
     elif ema_signal == -1:
         print("--> EMA signals BEAR market...")
         print("--> Selling units to limit losses")
         sell_order(bal_btc, ltp, order=True, override=True)
-        print(bal_btc)
-        # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
+        # Round down the order amount by a small fraction
+        # to allow for fluctuations in the market price
+        create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
         return "SELL"
     elif buy_signal == -1:
+        # Check if we are making a profit before selling
         if sell_order(bal_btc, ltp):
             sell_order(bal_btc, ltp, order=True)
-            # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
+            # Round down the order amount by a small fraction
+            # to allow for fluctuations in the market price
+            create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
         return "SELL"
     elif buy_signal == 0:
         print("Price fluctuating --HOLDING")
@@ -197,15 +199,6 @@ def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
 
 
 if __name__ == "__main__":
-    #     bal_JPY = get_balance("JPY")
-    #     bal_BTC = get_balance("BTC")
-
-    #     ltp = get_ltp("BTC_JPY")
-
-    #     if sell_order(bal_BTC, ltp):
-    #         order = sell_order(bal_BTC, ltp, order=True)
-
-    # def backup():
     print("Starting script...")
 
     bal_JPY = get_balance("JPY")
@@ -247,7 +240,6 @@ if __name__ == "__main__":
 
     ema_signal = df.tail(1)["Signal"].iloc[0]
     buy_signal = generate_signal(df)
-    # close = df["Close"].tail(1).values[0]
 
     print(f"EMA Signal: {ema_signal}")
 
@@ -277,7 +269,6 @@ if __name__ == "__main__":
             df = prepare_mpf(df)
             ema_signal = df.tail(1)["Signal"].iloc[0]
             buy_signal = generate_signal(df)
-            # close = df["Close"].tail(1).values[0]
             mpf_plot(
                 df,
                 range=CHART_DURATION,

@@ -88,13 +88,13 @@ def get_ltp(currency_pair="BTC_JPY"):
 
 
 def sell_order(bal_btc, ltp, fee=FEE, order=False, override=False):
-    # Simulates an order and returns a boolean
+    # Simulates a SELL order and returns a boolean
     # Resets previous BUY order, if set to True
     # If override set to True, will perform sell without checks
     if order:
-        print("Generating order...")
+        print("Generating SELL order...")
     else:
-        print("Simulating order...")
+        print("Simulating SELL order...")
     try:
         df = pd.read_csv(PREV_BUY)
         prev_buy = int(df["BUY"].values[0])
@@ -118,7 +118,7 @@ def sell_order(bal_btc, ltp, fee=FEE, order=False, override=False):
 
     if total < prev_buy:
         print(f"Previous BUY: ¥{prev_buy:,}")
-        print("Exiting Trade: Price Too Low")
+        print("--> Exiting Trade: Price Too Low")
         return False
 
     if order:
@@ -135,6 +135,7 @@ def sell_order(bal_btc, ltp, fee=FEE, order=False, override=False):
 
 
 def simulate_buy(bal_jpy, ltp, fee=FEE):
+
     if is_valid_order(ltp, bal_jpy, fee):
         try:
             df = pd.read_csv(PREV_BUY)
@@ -152,6 +153,50 @@ def simulate_buy(bal_jpy, ltp, fee=FEE):
         return total_purchase
     else:
         print("Insufficient Funds")
+
+
+def buy_order(bal_jpy, ltp, fee=FEE, order=False, testing=False):
+    # Simulates a BUY order and returns a boolean
+    # If order is set to True, will return purchase amount
+
+    if order:
+        print("Generating BUY order...")
+    else:
+        print("Simulating BUY order...")
+    btc_order = float(bal_jpy) / (ltp * (1 + fee))
+    current_buy = int((float(btc_order) * float(ltp)) * (1 + fee))
+
+    if btc_order > MIN_ORDER:
+        try:
+            df = pd.read_csv(PREV_BUY)
+            prev_buy = float(df["BUY"].values[0])
+        except:
+            print("Previous BUY not found")
+            print("Assuming this is your first BUY order")
+            print("--> Resetting Prev BUY to 0")
+            prev_buy = 0
+        # Round down the BTC order, to reduce the purchased units of BTC
+        # There may be slight price fluctuations at the time of purchase
+        # Which may result in not having enough funds available
+        btc_order_rounded = int(btc_order * 100000) / 100000
+        new_buy = prev_buy + current_buy
+
+        if not order or testing:
+            print(f"Funds Available: ¥{int(bal_jpy):,}")
+            print(f"Last Trade Price: ¥{int(ltp):,}")
+            print(f"Total Purchase Amount: {btc_order_rounded } BTC")
+            print(f"BUY order: ¥{current_buy:,}")
+
+        if order and not testing:
+            df = pd.DataFrame({"BUY": [new_buy]})
+            df.to_csv(PREV_BUY, index=False)
+        else:
+            print("BUY Order Successful")
+            return True
+        return btc_order_rounded
+    else:
+        print("--> Exiting Trade: Insufficient Funds")
+        return False
 
 
 def create_order(product_code, size, side):
@@ -190,3 +235,4 @@ if __name__ == "__main__":
 
     # market_sell("ETH_JPY", round(float(get_balance("ETH")), 3))
     # create_order("BTC_JPY", simulate_buy(bal_JPY, ltp), "BUY")
+    print(buy_order(15000, 10800000))
