@@ -179,15 +179,15 @@ def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
             order = create_order("BTC_JPY", buy_order(bal_jpy, ltp, order=True), "BUY")
             print("buy_order is True")
         position = "BUY"
-    elif ema_signal == -1:
-        print("--> EMA signals BEAR market...")
-        print("--> Selling units to limit losses")
-        bal_btc = sell_order(bal_btc, ltp, order=True, override=True)
-        if is_valid_order(bal_btc):
-            order = create_order("BTC_JPY", bal_btc, "SELL")
-        else:
-            print("--> Exiting: Minimum order size is 0.001 BTC")
-        position = "SELL"
+    # elif ema_signal == -1:
+    #     print("--> EMA signals BEAR market...")
+    #     print("--> Selling units to limit losses")
+    #     bal_btc = sell_order(bal_btc, ltp, order=True, override=True)
+    #     if is_valid_order(bal_btc):
+    #         order = create_order("BTC_JPY", bal_btc, "SELL")
+    #     else:
+    #         print("--> Exiting: Minimum order size is 0.001 BTC")
+    #     position = "SELL"
     elif buy_signal == -1:
         # Check if we are making a profit before selling
         if sell_order(bal_btc, ltp):
