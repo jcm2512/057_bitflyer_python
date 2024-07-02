@@ -13,8 +13,7 @@ from bitflyer_actions import (
     get_ltp,
     create_order,
     simulate_buy,
-    simulate_sell,
-    is_valid_sell,
+    sell_order,
 )
 
 load_dotenv()
@@ -174,24 +173,23 @@ def generate_signal(df):
 
 def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
     if ema_signal == 1 and buy_signal == 1:
-        if is_valid_order(ltp, bal_jpy):
+        if is_valid_order(bal_jpy, ltp):
             print("Let's BUY")
-            create_order("BTC_JPY", simulate_buy(bal_jpy, ltp), "BUY")
+            # create_order("BTC_JPY", simulate_buy(bal_jpy, ltp), "BUY")
         else:
             print("Exiting Trade --Not enough funds")
         return "BUY"
     elif buy_signal == -1:
-        if is_valid_sell(ltp, bal_btc):
-            # need to fix this line simulate_sell()
-            create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
-            print("Let's SELL")
-        else:
-            print("Exiting Trade --Too Low")
+        if sell_order(bal_btc, ltp):
+            sell_order(bal_btc, ltp, order=True)
+            # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
         return "SELL"
     elif ema_signal == -1:
-        print("EMA signals BEAR market...")
-        print("Selling units to limit losses")
-        create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
+        print("--> EMA signals BEAR market...")
+        print("--> Selling units to limit losses")
+        sell_order(bal_btc, ltp, order=True, override=True)
+        print(bal_btc)
+        # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
         return "SELL"
     elif buy_signal == 0:
         print("Price fluctuating --HOLDING")
@@ -199,6 +197,15 @@ def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
 
 
 if __name__ == "__main__":
+    #     bal_JPY = get_balance("JPY")
+    #     bal_BTC = get_balance("BTC")
+
+    #     ltp = get_ltp("BTC_JPY")
+
+    #     if sell_order(bal_BTC, ltp):
+    #         order = sell_order(bal_BTC, ltp, order=True)
+
+    # def backup():
     print("Starting script...")
 
     bal_JPY = get_balance("JPY")
@@ -242,6 +249,9 @@ if __name__ == "__main__":
     buy_signal = generate_signal(df)
     # close = df["Close"].tail(1).values[0]
 
+    ema_signal = -1
+    buy_signal = 0
+
     print(f"EMA Signal: {ema_signal}")
 
     print(f"BUY Signal: {buy_signal}")
@@ -251,7 +261,13 @@ if __name__ == "__main__":
 
     df.to_csv(EMA_DATA, index=False)
 
-    position = place_order(ema_signal, buy_signal, ltp, bal_JPY, bal_BTC)
+    position = place_order(
+        ema_signal,
+        buy_signal,
+        get_ltp("BTC_JPY"),
+        get_balance("JPY"),
+        get_balance("BTC"),
+    )
 
     # plot chart for 2 weeks
     mpf_plot(df, range=CHART_DURATION, position=position)
