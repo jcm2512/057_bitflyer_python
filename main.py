@@ -175,15 +175,17 @@ def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
         if buy_order(bal_jpy, ltp):
             # Order has already been rounded down within the buy_order function
             # to allow for fluctuations in the market price
-            create_order("BTC_JPY", buy_order(bal_jpy, ltp, order=True), "BUY")
+            # create_order("BTC_JPY", buy_order(bal_jpy, ltp, order=True), "BUY")
+            print("buy_order is True")
         return "BUY"
     elif ema_signal == -1:
         print("--> EMA signals BEAR market...")
         print("--> Selling units to limit losses")
-        sell_order(bal_btc, ltp, order=True, override=True)
+        s = sell_order(bal_btc, ltp, order=True, override=True)
+        print(s)
         # Round down the order amount by a small fraction
         # to allow for fluctuations in the market price
-        create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
+        # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
         return "SELL"
     elif buy_signal == -1:
         # Check if we are making a profit before selling
@@ -191,7 +193,7 @@ def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
             sell_order(bal_btc, ltp, order=True)
             # Round down the order amount by a small fraction
             # to allow for fluctuations in the market price
-            create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
+            # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
         return "SELL"
     elif buy_signal == 0:
         print("Price fluctuating --HOLDING")
