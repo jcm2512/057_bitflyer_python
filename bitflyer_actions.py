@@ -62,10 +62,10 @@ def get_balance(currency_code):
             return float(balance["amount"])
 
 
-def is_valid_order(close, bal, fee=FEE):
-    is_enough = float(bal) / (close * (1 + fee))
-    print("is_enough = float(bal) / (close * (1 + fee))")
-    print(f"{is_enough} = {bal} / ({close} * (1 + {fee})")
+def is_valid_order(ltp, bal_jpy, fee=FEE):
+    is_enough = float(bal_jpy) / (ltp * (1 + fee))
+    print("is_enough = float(bal_jpy) / (ltp * (1 + fee))")
+    print(f"{is_enough} = {bal_jpy} / ({ltp} * (1 + {fee})")
     print(f"min_order = {MIN_ORDER}")
     if is_enough > MIN_ORDER:
         return True
