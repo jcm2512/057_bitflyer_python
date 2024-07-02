@@ -13,6 +13,7 @@ from bitflyer_actions import (
     create_order,
     sell_order,
     buy_order,
+    is_valid_order,
 )
 
 load_dotenv()
@@ -171,33 +172,35 @@ def generate_signal(df):
 
 
 def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
+    order = True
+    position = ""
     if ema_signal == 1 and buy_signal == 1:
         if buy_order(bal_jpy, ltp):
-            # Order has already been rounded down within the buy_order function
-            # to allow for fluctuations in the market price
-            # create_order("BTC_JPY", buy_order(bal_jpy, ltp, order=True), "BUY")
+            order = create_order("BTC_JPY", buy_order(bal_jpy, ltp, order=True), "BUY")
             print("buy_order is True")
-        return "BUY"
+        position = "BUY"
     elif ema_signal == -1:
         print("--> EMA signals BEAR market...")
         print("--> Selling units to limit losses")
-        s = sell_order(bal_btc, ltp, order=True, override=True)
-        print(s)
-        # Round down the order amount by a small fraction
-        # to allow for fluctuations in the market price
-        # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
-        return "SELL"
+        bal_btc = sell_order(bal_btc, ltp, order=True, override=True)
+        if is_valid_order(bal_btc):
+            order = create_order("BTC_JPY", bal_btc, "SELL")
+        else:
+            print("--> Exiting: Minimum order size is 0.001 BTC")
+        position = "SELL"
     elif buy_signal == -1:
         # Check if we are making a profit before selling
         if sell_order(bal_btc, ltp):
-            sell_order(bal_btc, ltp, order=True)
-            # Round down the order amount by a small fraction
-            # to allow for fluctuations in the market price
-            # create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
-        return "SELL"
+            bal_btc = sell_order(bal_btc, ltp, order=True)
+            order = create_order("BTC_JPY", bal_btc, "SELL")
+        position = "SELL"
     elif buy_signal == 0:
         print("Price fluctuating --HOLDING")
-        return "HOLD"
+        position = "HOLD"
+    if order == None:
+        # Order was not successful
+        print("Order Unsuccessful")
+    return position
 
 
 if __name__ == "__main__":
@@ -256,7 +259,8 @@ if __name__ == "__main__":
         ema_signal,
         buy_signal,
         get_ltp("BTC_JPY"),
-        get_balance("JPY"),
+        # get_balance("JPY"),
+        "45000",
         get_balance("BTC"),
     )
 

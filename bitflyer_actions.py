@@ -62,10 +62,9 @@ def get_balance(currency_code):
             return float(balance["amount"])
 
 
-def is_valid_order(bal_jpy, ltp, fee=FEE):
+def is_valid_order(order, min_order=MIN_ORDER):
     # Checks to see if order is more than the minimum order
-    is_enough = float(bal_jpy) / (ltp * (1 + fee))
-    if is_enough > MIN_ORDER:
+    if order > min_order:
         return True
     return False
 
@@ -105,6 +104,14 @@ def sell_order(bal_btc, ltp, fee=FEE, order=False, override=False):
     sub_total = int(bal_btc * ltp)
     total = int(sub_total - (sub_total * fee))
 
+    # Round down the BTC order, to reduce the purchased units of BTC
+    # There may be slight price fluctuations at the time of purchase
+    # Which may result in not having enough funds available
+    round_down = bal_btc * 0.995
+
+    # Convert to 8 decimal places
+    btc_total = float(f"{round_down:.8f}")
+
     if override:
         print("Stop Loss Trade")
         print("----------------")
@@ -114,7 +121,7 @@ def sell_order(bal_btc, ltp, fee=FEE, order=False, override=False):
         # Reset Previous Buy Order to zero
         df.at[0, "BUY"] = 0
         df.to_csv(PREV_BUY, index=False)
-        return True
+        return btc_total
 
     if total < prev_buy:
         print(f"Previous BUY: ¥{prev_buy:,}")
@@ -130,7 +137,7 @@ def sell_order(bal_btc, ltp, fee=FEE, order=False, override=False):
         df.at[0, "BUY"] = 0
         df.to_csv(PREV_BUY, index=False)
 
-        return total
+        return btc_total
     return True
 
 
