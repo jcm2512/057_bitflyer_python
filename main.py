@@ -37,7 +37,7 @@ JST = timezone("Asia/Tokyo")
 ENTRIES_PER_UPDATE = 50
 MAX_ENTRIES = 500
 
-CHART_DURATION = 336  # 2 Weeks (336 hours)
+CHART_DURATION = 168  # 1 Week (168 hours)
 
 MPF_PLOT = os.path.join(OUTPUT_DIR, "candlestick_plot.png")
 
