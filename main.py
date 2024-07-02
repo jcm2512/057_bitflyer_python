@@ -172,18 +172,18 @@ def generate_signal(df):
     return 0
 
 
-def place_order(ema_signal, buy_signal, ltp, bal, bal_BTC):
+def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
     if ema_signal == 1 and buy_signal == 1:
-        if is_valid_order(ltp, bal):
+        if is_valid_order(ltp, bal_jpy):
             print("Let's BUY")
-            create_order("BTC_JPY", simulate_buy(bal_BTC, ltp), "BUY")
+            create_order("BTC_JPY", simulate_buy(bal_jpy, ltp), "BUY")
         else:
             print("Exiting Trade --Not enough funds")
         return "BUY"
     elif buy_signal == -1:
-        if is_valid_sell(ltp, bal_BTC):
+        if is_valid_sell(ltp, bal_btc):
             # need to fix this line simulate_sell()
-            create_order("BTC_JPY", (bal_BTC * 0.99), "SELL")
+            create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
             print("Let's SELL")
         else:
             print("Exiting Trade --Too Low")
@@ -191,7 +191,7 @@ def place_order(ema_signal, buy_signal, ltp, bal, bal_BTC):
     elif ema_signal == -1:
         print("EMA signals BEAR market...")
         print("Selling units to limit losses")
-        create_order("BTC_JPY", (bal_BTC * 0.99), "SELL")
+        create_order("BTC_JPY", (bal_btc * 0.99), "SELL")
         return "SELL"
     elif buy_signal == 0:
         print("Price fluctuating --HOLDING")
