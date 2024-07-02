@@ -178,7 +178,6 @@ def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
     if buy_signal == 1:
         if buy_order(bal_jpy, ltp):
             order = create_order("BTC_JPY", buy_order(bal_jpy, ltp, order=True), "BUY")
-            print("buy_order is True")
         position = "BUY"
     # elif ema_signal == -1:
     #     print("--> EMA signals BEAR market...")
