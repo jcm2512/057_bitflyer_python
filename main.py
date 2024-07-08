@@ -160,14 +160,23 @@ def mpf_plot(df, range, ema_tests=False, period=EMA_PERIOD, position="HOLDING"):
         fig.savefig(MPF_PLOT)
 
 
-def generate_signal(df):
-    if len(df) < 3:
-        return 0
-    x, y, z = df["Close"].tail(3).values
-    if x < y < z:
-        return 1
-    elif x > y > z:
-        return -1
+def generate_signal(df, periods):
+    if periods == 3:
+        if len(df) < 3:
+            return 0
+        x, y, z = df["Close"].tail(3).values
+        if x < y < z:
+            return 1
+        elif x > y > z:
+            return -1
+    if periods == 2:
+        if len(df) < 2:
+            return 0
+        y, z = df["Close"].tail(3).values
+        if y < z:
+            return 1
+        elif y > z:
+            return -1
     return 0
 
 
@@ -243,7 +252,7 @@ if __name__ == "__main__":
     df = prepare_mpf(df)
 
     ema_signal = df.tail(1)["Signal"].iloc[0]
-    buy_signal = generate_signal(df)
+    buy_signal = generate_signal(df, 2)
 
     print(f"EMA Signal: {ema_signal}")
 
