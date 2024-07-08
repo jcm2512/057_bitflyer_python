@@ -191,14 +191,19 @@ def generate_signals(df, timeframe, prev_df):
     signals = []
     for i in range(len(df)):
         if i > timeframe - 2:
-            subset = df["Close"].iloc[i - (timeframe - 1) : i + 1].values
+            subset_close = df["Close"].iloc[i - (timeframe - 1) : i + 1].values
+            subset_ema = df["Signal"].iloc[i - (timeframe - 1) : i + 1].values
             if timeframe == 3:
-                signals.append(f"{subset[0]}, {subset[1]}, {subset[2]}")
+                signals.append(
+                    f"{subset_close[0]}, {subset_close[1]}, {subset_close[2]}"
+                )
             if timeframe == 2:
-                if subset[0] > subset[1]:
+                if subset_close[0] > subset_close[1] or subset_ema[1] == -1:
+                    signals.append("SELL")
+                elif subset_close[0] < subset_close[1] and subset_ema[1] == 1:
                     signals.append("BUY")
                 else:
-                    signals.append("SELL")
+                    signals.append("HOLD")
 
         else:
             signals.append("HOLD")
@@ -283,7 +288,7 @@ if __name__ == "__main__":
         df_signals.to_csv(DF_SIGNALS, index=False)
 
     ema_signal = df_ha.tail(1)["Signal"].iloc[0]
-    buy_signal = generate_signal(df_ha, 2)
+    buy_signal = generate_signal(df_ha, 3)
 
     print(f"EMA Signal: {ema_signal}")
 
