@@ -18,8 +18,10 @@ from bitflyer_actions import (
 
 load_dotenv()
 
-EMA_TESTS = True
+EMA_TESTS = False
 EMA_PERIOD = 50
+
+LOOKBACK_TIMEFRAME = 2
 
 COIN_API_KEY = os.getenv("COIN_API_KEY")
 CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
@@ -27,11 +29,16 @@ CRYPTOCOMPARE_API_KEY = os.getenv("CRYPTOCOMPARE_API_KEY")
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local_docs")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+LOCAL = False
+if OUTPUT_DIR == "local_docs":
+    LOCAL = True
+
 CSV_DATA = os.path.join(OUTPUT_DIR, "data.csv")
 HA_DATA = os.path.join(OUTPUT_DIR, "heikin_ashi.csv")
 SMA_DATA = os.path.join(OUTPUT_DIR, "sma_data.csv")
 EMA_DATA = os.path.join(OUTPUT_DIR, "ema_data.csv")
 EMA_DATA2 = os.path.join(OUTPUT_DIR, "ema_data_before.csv")
+DF_SIGNALS = os.path.join(OUTPUT_DIR, "df_signals.csv")
 
 JST = timezone("Asia/Tokyo")
 
@@ -172,12 +179,32 @@ def generate_signal(df, periods):
     if periods == 2:
         if len(df) < 2:
             return 0
-        y, z = df["Close"].tail(3).values
+        y, z = df["Close"].tail(2).values
         if y < z:
             return 1
         elif y > z:
             return -1
     return 0
+
+
+def generate_signals(df, timeframe, prev_df):
+    signals = []
+    for i in range(len(df)):
+        if i > timeframe - 2:
+            subset = df["Close"].iloc[i - (timeframe - 1) : i + 1].values
+            if timeframe == 3:
+                signals.append(f"{subset[0]}, {subset[1]}, {subset[2]}")
+            if timeframe == 2:
+                if subset[0] > subset[1]:
+                    signals.append("BUY")
+                else:
+                    signals.append("SELL")
+
+        else:
+            signals.append("HOLD")
+    df["Order_Signals"] = signals
+    df["Real_Close"] = prev_df["Close"]
+    return df
 
 
 def place_order(ema_signal, buy_signal, ltp, bal_jpy, bal_btc):
@@ -247,47 +274,35 @@ if __name__ == "__main__":
 
     df = calculate_ema(df, period=EMA_PERIOD)
 
-    df = to_heikin_ashi(df)
+    df_ha = to_heikin_ashi(df)
 
-    df = prepare_mpf(df)
+    df_ha = prepare_mpf(df_ha)
 
-    ema_signal = df.tail(1)["Signal"].iloc[0]
-    buy_signal = generate_signal(df, 2)
+    if LOCAL:
+        df_signals = generate_signals(df_ha, LOOKBACK_TIMEFRAME, df)
+        df_signals.to_csv(DF_SIGNALS, index=False)
+
+    ema_signal = df_ha.tail(1)["Signal"].iloc[0]
+    buy_signal = generate_signal(df_ha, 2)
 
     print(f"EMA Signal: {ema_signal}")
 
     print(f"BUY Signal: {buy_signal}")
 
     # retain chart info for only the last 2 weeks
-    df = df.tail(CHART_DURATION)
+    df_ha = df_ha.tail(CHART_DURATION)
 
-    df.to_csv(EMA_DATA, index=False)
+    df_ha.to_csv(EMA_DATA, index=False)
 
-    position = place_order(
-        ema_signal,
-        buy_signal,
-        get_ltp("BTC_JPY"),
-        get_balance("JPY"),
-        get_balance("BTC"),
-    )
+    # position = place_order(
+    #     ema_signal,
+    #     buy_signal,
+    #     get_ltp("BTC_JPY"),
+    #     get_balance("JPY"),
+    #     get_balance("BTC"),
+    # )
 
     # plot chart for 2 weeks
-    mpf_plot(df, range=CHART_DURATION, position=position)
-
-    if EMA_TESTS:
-        for ema_duration in range(50, 250, 50):
-            df = pd.read_csv(CSV_DATA)
-            df = calculate_ema(df, period=ema_duration)
-            df = to_heikin_ashi(df)
-            df = prepare_mpf(df)
-            ema_signal = df.tail(1)["Signal"].iloc[0]
-            buy_signal = generate_signal(df)
-            mpf_plot(
-                df,
-                range=CHART_DURATION,
-                ema_tests=EMA_TESTS,
-                period=ema_duration,
-                position=position,
-            )
+    # mpf_plot(df, range=CHART_DURATION, position=position)
 
     print("Script finished.")
