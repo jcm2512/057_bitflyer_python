@@ -141,27 +141,6 @@ def sell_order(bal_btc, ltp, fee=FEE, order=False, override=False):
     return True
 
 
-def simulate_buy(bal_jpy, ltp, fee=FEE):
-
-    if is_valid_order(ltp, bal_jpy, fee):
-        try:
-            df = pd.read_csv(PREV_BUY)
-            prev_buy = float(df["BUY"].values[0])
-        except:
-            print("Previous BUY not found")
-            prev_buy = 0
-        print(f"Funds Available: {float(bal_jpy)}")
-        total_purchase = round(float(bal_jpy) / (float(ltp) * (1 + fee)), 6)
-        print(f"Last Trade Price: {int(ltp)}")
-        print(f"Total Purchase Amount: {total_purchase} units")
-        prev_buy = prev_buy + int((total_purchase * float(ltp)) * (1 + fee))
-        df = pd.DataFrame({"BUY": [prev_buy]})
-        df.to_csv(PREV_BUY, index=False)
-        return total_purchase
-    else:
-        print("Insufficient Funds")
-
-
 def buy_order(bal_jpy, ltp, fee=FEE, order=False, testing=False):
     # Simulates a BUY order and returns a boolean
     # If order is set to True, will return purchase amount
