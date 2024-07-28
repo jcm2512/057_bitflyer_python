@@ -68,7 +68,7 @@ def fetch_ohlcv(csv_data=CSV_DATA, entries_per_update=100):
 
             if data_exists(csv_data):
                 new_data = new_data[~new_data["Time"].isin(df["Time"])]
-                df = pd.concat([df, new_data])
+                df = pd.concat([df, new_data], ignore_index=True)
                 df = df.tail(MAX_ENTRIES)
             else:
                 df = new_data
