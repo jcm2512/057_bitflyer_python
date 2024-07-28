@@ -8,22 +8,15 @@ from dotenv import load_dotenv
 
 from bitflyer_actions import (
     get_balance,
-    get_ltp,
-    create_order,
-    sell_order,
-    buy_order,
-    is_valid_order,
     get_open_ifd_orders,
     get_current_market_price,
-    buy_limit_order,
     ifd_order,
     has_funds_for_order,
-    calculate_reserved_jpy_for_ifd_orders,
 )
 
-from cryptocompare import fetch_ohlcv
+# from cryptocompare import fetch_ohlcv
 
-from chart_actions import append_MCD, mpf_plot
+# from chart_actions import append_MCD, mpf_plot
 
 load_dotenv()
 
@@ -71,10 +64,6 @@ def is_open_order(amt, open_orders):
 
 if __name__ == "__main__":
     print("Starting Main script...")
-    # df = fetch_ohlcv(CSV_DATA)
-    # df = append_MCD(df, 24, 52, 9)
-    # df.to_csv(CSV_DATA, index=False)
-    # mpf_plot(df, MPF_PLOT, range=CHART_DURATION)
 
     grid_interval = PRICE_INTERVAL
     intervals = grid_intervals()
