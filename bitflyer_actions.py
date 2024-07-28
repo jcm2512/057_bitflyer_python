@@ -48,7 +48,7 @@ def get_headers(api_key, api_secret, method, path, body=""):
 def get_balance(currency_code):
     method = "GET"
     path = "/v1/me/getbalance"
-    url = URL + path
+    url = f"{URL}{path}"
 
     headers = get_headers(API_KEY, API_SECRET, method, path)
     response = requests.get(url, headers=headers)
@@ -62,6 +62,68 @@ def get_balance(currency_code):
             return float(balance["amount"])
 
 
+def get_open_limit_orders(product_code="BTC_JPY"):
+    method = "GET"
+    path = "/v1/me/getchildorders"
+    params = {"product_code": product_code, "child_order_state": "ACTIVE"}
+    query = "&".join(
+        f"{key}={value}" for key, value in params.items() if value is not None
+    )
+    url = f"{URL}{path}?{query}"
+
+    headers = get_headers(API_KEY, API_SECRET, method, path + "?" + query)
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        orders = response.json()
+        prices = [order["price"] for order in orders if "price" in order]
+
+        return prices
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+
+
+def get_open_ifd_orders(product_code="BTC_JPY"):
+    method = "GET"
+    path = "/v1/me/getparentorders"
+    params = {"product_code": product_code, "parent_order_state": "ACTIVE"}
+    query = "&".join(f"{key}={value}" for key, value in params.items())
+    url = f"{URL}{path}?{query}"
+
+    headers = get_headers(API_KEY, API_SECRET, method, path + "?" + query)
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        orders = response.json()
+        ifd_orders = [
+            order["price"] for order in orders if order["parent_order_type"] == "IFD"
+        ]
+        return ifd_orders
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+
+
+def get_current_market_price(product_code="BTC_JPY"):
+    path = "/v1/getticker"
+    params = {"product_code": product_code}
+    url = f"{URL}{path}"
+
+    response = requests.get(url, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        return data.get("ltp")  # LTP stands for Last Traded Price
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+
+
 def is_valid_order(order, min_order=MIN_ORDER):
     # Checks to see if order is more than the minimum order
     if order > min_order:
@@ -72,7 +134,7 @@ def is_valid_order(order, min_order=MIN_ORDER):
 def get_ltp(currency_pair="BTC_JPY"):
     path = "/v1/ticker"
     params = {"product_code": currency_pair}
-    url = URL + path
+    url = f"{URL}{path}"
 
     response = requests.get(url, params=params)
 
@@ -141,25 +203,9 @@ def sell_order(bal_btc, ltp, fee=FEE, order=False, override=False):
     return True
 
 
-def simulate_buy(bal_jpy, ltp, fee=FEE):
-
-    if is_valid_order(ltp, bal_jpy, fee):
-        try:
-            df = pd.read_csv(PREV_BUY)
-            prev_buy = float(df["BUY"].values[0])
-        except:
-            print("Previous BUY not found")
-            prev_buy = 0
-        print(f"Funds Available: {float(bal_jpy)}")
-        total_purchase = round(float(bal_jpy) / (float(ltp) * (1 + fee)), 6)
-        print(f"Last Trade Price: {int(ltp)}")
-        print(f"Total Purchase Amount: {total_purchase} units")
-        prev_buy = prev_buy + int((total_purchase * float(ltp)) * (1 + fee))
-        df = pd.DataFrame({"BUY": [prev_buy]})
-        df.to_csv(PREV_BUY, index=False)
-        return total_purchase
-    else:
-        print("Insufficient Funds")
+def has_funds_for_order(market_price, balance, amt=0.001, fee=FEE):
+    required_jpy = amt * market_price * (1 + fee)
+    return balance >= required_jpy
 
 
 def buy_order(bal_jpy, ltp, fee=FEE, order=False, testing=False):
@@ -209,7 +255,7 @@ def buy_order(bal_jpy, ltp, fee=FEE, order=False, testing=False):
 def create_order(product_code, size, side):
     method = "POST"
     path = "/v1/me/sendchildorder"
-    url = URL + path
+    url = f"{URL}{path}"
 
     body = {
         "product_code": product_code,
@@ -228,6 +274,76 @@ def create_order(product_code, size, side):
         return None
 
     return response.json()
+
+
+def buy_limit_order(price, product_code="BTC_JPY", size=0.001):
+    method = "POST"
+    path = "/v1/me/sendchildorder"
+    url = f"{URL}{path}"
+
+    body = {
+        "product_code": product_code,
+        "child_order_type": "LIMIT",
+        "price": price,
+        "side": "BUY",
+        "size": size,
+    }
+
+    body_json = json.dumps(body)
+
+    headers = get_headers(API_KEY, API_SECRET, method, path, body_json)
+    response = requests.post(url, headers=headers, data=body_json)
+
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+
+    return response.json()
+
+
+def ifd_order(buy_price, interval, product_code="BTC_JPY", buy_size=0.001):
+    method = "POST"
+    path = "/v1/me/sendparentorder"
+    body = {
+        "order_method": "IFD",
+        "time_in_force": "GTC",
+        "parameters": [
+            {
+                "product_code": product_code,
+                "condition_type": "LIMIT",
+                "side": "BUY",
+                "price": buy_price,
+                "size": buy_size,
+            },
+            {
+                "product_code": product_code,
+                "condition_type": "LIMIT",
+                "side": "SELL",
+                "price": buy_price + interval,
+                "size": buy_size,
+            },
+        ],
+    }
+    body_json = json.dumps(body)
+    headers = get_headers(API_KEY, API_SECRET, method, path, body_json)
+
+    response = requests.post(URL + path, headers=headers, data=body_json)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+
+
+def calculate_reserved_jpy_for_ifd_orders(ifd_orders):
+    reserved_jpy = 0
+    for order in ifd_orders:
+        for param in order["parameters"]:
+            if param["side"] == "BUY":
+                reserved_jpy += param["price"] * param["size"] * (1 + FEE_RATE)
+    return reserved_jpy
 
 
 if __name__ == "__main__":
