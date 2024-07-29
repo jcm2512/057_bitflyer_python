@@ -42,8 +42,8 @@ MAX_ENTRIES = 2000
 
 CHART_DURATION = 500  # 7 Days: 168 hours; 3 Days = 72
 
-MIN_PRICE = 9400000
-MAX_PRICE = 10600000
+MIN_PRICE = 9300000
+MAX_PRICE = 10700000
 PRICE_INTERVAL = 200000
 
 MPF_PLOT = os.path.join(OUTPUT_DIR, "candlestick_plot.png")
@@ -63,24 +63,33 @@ def is_open_order(amt, open_orders):
 
 
 if __name__ == "__main__":
+    LIVE = True
     print("Starting Main script...")
 
     grid_interval = PRICE_INTERVAL
     intervals = grid_intervals()
+    print(intervals)
+
+    # TODO: Get high and low for past 90 days to determine Min and Max price
+    # Min price should be at least 1 interval above the lowest price
+    # Max price should be at least 1 interval below the highest price
+    # EG:   High / Low :    11243505 / 8615895
+    #       Max / Min:      11000000 / 8900000
     market_price = get_current_market_price()
 
-    if MIN_PRICE <= market_price <= MAX_PRICE:
-        buy_order_amt = find_closest_interval(market_price, intervals)
-        ifd_orders = get_open_ifd_orders()
+    if LIVE:
+        if MIN_PRICE <= market_price <= MAX_PRICE:
+            buy_order_amt = find_closest_interval(market_price, intervals)
+            ifd_orders = get_open_ifd_orders()
 
-        if not is_open_order(buy_order_amt, ifd_orders):
-            if has_funds_for_order(market_price, get_balance("JPY")):
-                ifd_order(buy_order_amt, grid_interval)
+            if not is_open_order(buy_order_amt, ifd_orders):
+                if has_funds_for_order(market_price, get_balance("JPY")):
+                    ifd_order(buy_order_amt, grid_interval)
+                else:
+                    print("INSUFFICIENT FUNDS")
             else:
-                print("INSUFFICIENT FUNDS")
+                print(f"Order:{buy_order_amt} exists \n EXITING...")
         else:
-            print(f"Order:{buy_order_amt} exists \n EXITING...")
-    else:
-        print("PRICE IS OUT OF RANGE")
+            print("PRICE IS OUT OF RANGE")
 
     print("DONE")
