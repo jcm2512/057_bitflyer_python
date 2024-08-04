@@ -42,7 +42,7 @@ MAX_ENTRIES = 2000
 
 CHART_DURATION = 500  # 7 Days: 168 hours; 3 Days = 72
 
-MIN_PRICE = 9300000
+MIN_PRICE = 8900000
 MAX_PRICE = 10700000
 PRICE_INTERVAL = 200000
 
@@ -63,19 +63,28 @@ def is_open_order(amt, open_orders):
 
 
 if __name__ == "__main__":
-    LIVE = True
+    LIVE = False
+
+    # Initialise variables
+    TEST_PRICE = None
+
     print("Starting Main script...")
+    if not LIVE:
+        TEST_PRICE = 8925964
+        ifd_orders = get_open_ifd_orders()
+        print(f"ifd orders: {ifd_orders}")
 
     grid_interval = PRICE_INTERVAL
     intervals = grid_intervals()
-    print(intervals)
 
     # TODO: Get high and low for past 90 days to determine Min and Max price
     # Min price should be at least 1 interval above the lowest price
     # Max price should be at least 1 interval below the highest price
-    # EG:   High / Low :    11243505 / 8615895
-    #       Max / Min:      11000000 / 8900000
-    market_price = get_current_market_price()
+
+    market_price = TEST_PRICE or get_current_market_price()
+
+    buy_order_amt = find_closest_interval(market_price, intervals)
+    print(f"market price: {market_price} | buy amt: {buy_order_amt}")
 
     if LIVE:
         if MIN_PRICE <= market_price <= MAX_PRICE:
