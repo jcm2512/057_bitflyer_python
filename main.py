@@ -4,6 +4,7 @@ from bitflyer_actions import (
     get_current_market_price,
     ifd_order,
     has_funds_for_order,
+    get_open_child_orders,
 )
 
 LIVE = True
@@ -25,7 +26,9 @@ def find_closest_interval(market_price, intervals):
 
 
 def is_open_order(amt, open_orders):
-    return amt in open_orders
+    if open_orders is None:
+        return False
+    return any(order["price"] == amt for order in open_orders)
 
 
 if __name__ == "__main__":
@@ -50,10 +53,20 @@ if __name__ == "__main__":
     print(f"buy amt: {buy_order_amt}")
 
     if LIVE:
-        if MIN_PRICE <= market_price <= MAX_PRICE:
+        ifd_orders = get_open_ifd_orders()
+
+        # Remove orders out of current price range
+        print("GETTING CURRENT ACTIVE IDF ORDERS...")
+        for order in ifd_orders:
+            child_orders = get_open_child_orders(order["parent_order_id"])
+            # NOTE: Each IFD order has 2 orders.
+            # List parent orders if both child orders are active
+            if len(child_orders) == 2:
+                print(order["parent_order_acceptance_id"])
+                # TODO: If open child order is still out of current price range CANCEL the order
+
+        if (MIN_PRICE - PRICE_INTERVAL) <= market_price <= MAX_PRICE:
             buy_order_amt = find_closest_interval(market_price, intervals)
-            ifd_orders = get_open_ifd_orders()
-            print(f"IFD Orders: {ifd_orders}")
 
             if not is_open_order(buy_order_amt, ifd_orders):
                 if has_funds_for_order(market_price, get_balance("JPY")):
@@ -64,5 +77,7 @@ if __name__ == "__main__":
                 print(f"Order:{buy_order_amt} exists \n EXITING...")
         else:
             print("PRICE IS OUT OF RANGE")
+
+        print(f"IFD Orders: {ifd_orders}")
 
     print("DONE")

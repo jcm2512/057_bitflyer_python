@@ -99,9 +99,43 @@ def get_open_ifd_orders(product_code="BTC_JPY"):
     if response.status_code == 200:
         orders = response.json()
         ifd_orders = [
-            order["price"] for order in orders if order["parent_order_type"] == "IFD"
+            {
+                "price": order["price"],
+                "parent_order_id": order["parent_order_id"],
+                "parent_order_acceptance_id": order["parent_order_acceptance_id"],
+            }
+            for order in orders
+            if order["parent_order_type"] == "IFD"
         ]
         return ifd_orders
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+
+
+def get_open_child_orders(parent_order_id, product_code="BTC_JPY"):
+    method = "GET"
+    path = "/v1/me/getchildorders"
+    params = {"product_code": product_code, "parent_order_id": parent_order_id}
+    query = "&".join(f"{key}={value}" for key, value in params.items())
+    url = f"{URL}{path}?{query}"
+
+    headers = get_headers(API_KEY, API_SECRET, method, path + "?" + query)
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        orders = response.json()
+        open_child_orders = [
+            {
+                "side": order["side"],
+                "price": order["price"],
+                "child_order_state": order["child_order_state"],
+            }
+            for order in orders
+            if order["child_order_state"] == "ACTIVE"
+        ]
+        return open_child_orders
     else:
         print(f"Error: {response.status_code}")
         print(response.text)
