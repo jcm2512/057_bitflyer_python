@@ -6,7 +6,7 @@ from bitflyer_actions import (
     has_funds_for_order,
 )
 
-LIVE = False
+LIVE = True
 
 # Initialise variables
 TEST_PRICE = None
