@@ -33,7 +33,7 @@ def is_open_order(amt, open_orders):
 
 
 if __name__ == "__main__":
-    print("Starting Main script...")
+    print(">>> Starting Main script")
     print("")
 
     grid_interval = PRICE_INTERVAL
@@ -41,7 +41,12 @@ if __name__ == "__main__":
     ifd_orders = get_open_ifd_orders()
     limit_orders = get_open_limit_orders(PRICE_INTERVAL)
     active_orders = ifd_orders + limit_orders
-    print(f"ACTIVE Orders: {active_orders}")
+
+    print(f"RANGE: \n{MIN_PRICE} - {MAX_PRICE - PRICE_INTERVAL}")
+    print("")
+    print(f"ACTIVE Orders: \n{[order["price"] for order in active_orders]}")
+    print("")
+
 
 
     # TODO: Get high and low for past 90 days to determine Min and Max price
@@ -53,29 +58,7 @@ if __name__ == "__main__":
     buy_order_amt = find_closest_interval(market_price, intervals)
 
     print(f"market price: {market_price}")
-    print(f"buy amt: {buy_order_amt}")
-
-    # Remove IFD orders that are out of current range
-    # -----------------------------------------------
-    bottom_range = buy_order_amt - PRICE_INTERVAL
-    print(f"bottom range: {bottom_range}")
     print("")
-    open_order = [
-        {
-            "parent_order_acceptance_id": order["parent_order_acceptance_id"],
-            "price": order["price"],
-        }
-        for order in ifd_orders
-        if order["price"] == bottom_range
-    ]
-    for order in open_order:
-        print(f"CANCELING ORDER")
-        print("----------")
-        print(f"price: {int(order["price"])}")
-        print(f"id: {order["parent_order_acceptance_id"]}")
-        cancel_parent_order(order["parent_order_acceptance_id"])
-        print("----------")
-
 
     if LIVE:
         # Check if price band is within range
@@ -84,6 +67,7 @@ if __name__ == "__main__":
 
             # Check if current price band is a vacant order
             if not is_open_order(buy_order_amt, active_orders):
+                print(f"buy amt: {buy_order_amt}")
 
                 # Check balance and create IFD order
                 if has_funds_for_order(market_price, get_balance("JPY")):
@@ -92,8 +76,27 @@ if __name__ == "__main__":
                 else:
                     print("INSUFFICIENT FUNDS")
             else:
-                print(f"Order:{buy_order_amt} exists \n EXITING...")
+                print(f"Existing Order:{buy_order_amt} \nEXITING...")
         else:
             print("PRICE IS OUT OF RANGE")
+        
+        # Remove IFD orders that are out of current range
+        # -----------------------------------------------
+        bottom_range = buy_order_amt - PRICE_INTERVAL
+        open_order = [
+            {
+                "parent_order_acceptance_id": order["parent_order_acceptance_id"],
+                "price": order["price"],
+            }
+            for order in ifd_orders
+            if order["price"] == bottom_range
+        ]
+        for order in open_order:
+            print(f"CANCELING ORDER")
+            print("----------")
+            print(f"price: {int(order["price"])}")
+            print(f"id: {order["parent_order_acceptance_id"]}")
+            cancel_parent_order(order["parent_order_acceptance_id"])
+            print("----------")
 
-    print("DONE")
+print("\n>>> End of script")
