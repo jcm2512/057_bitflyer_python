@@ -82,6 +82,33 @@ def get_open_ifd_orders(product_code="BTC_JPY"):
         return None
 
 
+def get_open_limit_orders(price_interval, product_code="BTC_JPY"):
+    method = "GET"
+    path = "/v1/me/getchildorders"
+    params = {"product_code": product_code, "child_order_state": "ACTIVE"}
+    query = "&".join(f"{key}={value}" for key, value in params.items())
+    url = f"{URL}{path}?{query}"
+
+    headers = get_headers(API_KEY, API_SECRET, method, path + "?" + query)
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        orders = response.json()
+        limit_orders = [
+            {
+                "price": order["price"] - price_interval,
+                "child_order_id": order["child_order_id"],
+            }
+            for order in orders
+            if order["child_order_type"] == "LIMIT"
+        ]
+        return limit_orders
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+
+
 def get_current_market_price(product_code="BTC_JPY"):
     path = "/v1/getticker"
     params = {"product_code": product_code}

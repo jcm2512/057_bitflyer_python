@@ -1,6 +1,7 @@
 from bitflyer_actions import (
     get_balance,
     get_open_ifd_orders,
+    get_open_limit_orders,
     get_current_market_price,
     ifd_order,
     has_funds_for_order,
@@ -38,7 +39,10 @@ if __name__ == "__main__":
     grid_interval = PRICE_INTERVAL
     intervals = grid_intervals()
     ifd_orders = get_open_ifd_orders()
-    # print(f"ACTIVE Orders: {ifd_orders}")
+    limit_orders = get_open_limit_orders(PRICE_INTERVAL)
+    active_orders = ifd_orders + limit_orders
+    print(f"ACTIVE Orders: {active_orders}")
+
 
     # TODO: Get high and low for past 90 days to determine Min and Max price
     # Min price should be at least 1 interval above the lowest price
@@ -79,7 +83,7 @@ if __name__ == "__main__":
             buy_order_amt = find_closest_interval(market_price, intervals)
 
             # Check if current price band is a vacant order
-            if not is_open_order(buy_order_amt, ifd_orders):
+            if not is_open_order(buy_order_amt, active_orders):
 
                 # Check balance and create IFD order
                 if has_funds_for_order(market_price, get_balance("JPY")):
