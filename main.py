@@ -44,10 +44,8 @@ if __name__ == "__main__":
 
     print(f"RANGE: \n{MIN_PRICE} - {MAX_PRICE - PRICE_INTERVAL}")
     print("")
-    print(f"ACTIVE Orders: \n{[order["price"] for order in active_orders]}")
+    print(f"ACTIVE Orders: \n{[order['price'] for order in active_orders]}")
     print("")
-
-
 
     # TODO: Get high and low for past 90 days to determine Min and Max price
     # Min price should be at least 1 interval above the lowest price
@@ -79,7 +77,7 @@ if __name__ == "__main__":
                 print(f"Existing Order:{buy_order_amt} \nEXITING...")
         else:
             print("PRICE IS OUT OF RANGE")
-        
+
         # Remove IFD orders that are out of current range
         # -----------------------------------------------
         bottom_range = buy_order_amt - PRICE_INTERVAL
@@ -94,8 +92,8 @@ if __name__ == "__main__":
         for order in open_order:
             print(f"CANCELING ORDER")
             print("----------")
-            print(f"price: {int(order["price"])}")
-            print(f"id: {order["parent_order_acceptance_id"]}")
+            print(f"price: {int(order['price'])}")
+            print(f"id: {order['parent_order_acceptance_id']}")
             cancel_parent_order(order["parent_order_acceptance_id"])
             print("----------")
 
