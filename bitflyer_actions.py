@@ -5,9 +5,6 @@ import hashlib
 import hmac
 import requests
 import json
-from dotenv import load_dotenv
-
-load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
@@ -101,12 +98,12 @@ def get_current_market_price(product_code="BTC_JPY"):
         return None
 
 
-def has_funds_for_order(market_price, balance, amt=0.001, fee=FEE):
+def has_funds_for_order(market_price, balance, amt=MIN_ORDER, fee=FEE):
     required_jpy = amt * market_price * (1 + fee)
     return balance >= required_jpy
 
 
-def ifd_order(buy_price, interval, product_code="BTC_JPY", buy_size=0.001):
+def ifd_order(buy_price, interval, product_code="BTC_JPY", buy_size=MIN_ORDER):
     method = "POST"
     path = "/v1/me/sendparentorder"
     url = f"{URL}{path}"
