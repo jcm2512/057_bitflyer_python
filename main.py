@@ -81,7 +81,7 @@ if __name__ == "__main__":
         # Remove IFD orders that are out of current range
         # -----------------------------------------------
         bottom_range = buy_order_amt - PRICE_INTERVAL
-        open_order = [
+        out_of_current_range = [
             {
                 "parent_order_acceptance_id": order["parent_order_acceptance_id"],
                 "price": order["price"],
@@ -89,12 +89,16 @@ if __name__ == "__main__":
             for order in ifd_orders
             if order["price"] == bottom_range
         ]
-        for order in open_order:
-            print(f"CANCELING ORDER")
+        
+        print(f"out of range orders:\n{out_of_current_range}")
+        for order in out_of_current_range:
+            print(f"TEST: CANCELING ORDER")
             print("----------")
+            print(f"bottom: {bottom_range}"
             print(f"price: {int(order['price'])}")
-            print(f"id: {order['parent_order_acceptance_id']}")
-            cancel_parent_order(order["parent_order_acceptance_id"])
+            id = order['parent_order_acceptance_id']
+            print(f"id: {id}")
+            # cancel_parent_order(id)
             print("----------")
 
 print("\n>>> End of script")
