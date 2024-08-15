@@ -12,6 +12,7 @@ API_SECRET = os.getenv("API_SECRET")
 URL = "https://api.bitflyer.com"
 
 MIN_ORDER = 0.001
+MIN_BUY_ORDER = 0.00105
 FEE = 0.001
 
 
@@ -130,7 +131,7 @@ def has_funds_for_order(market_price, balance, amt=MIN_ORDER, fee=FEE):
     return balance >= required_jpy
 
 
-def ifd_order(buy_price, interval, product_code="BTC_JPY", buy_size=MIN_ORDER):
+def ifd_order(buy_price, interval, product_code="BTC_JPY", buy_size=MIN_BUY_ORDER, sell_size=MIN_ORDER):
     method = "POST"
     path = "/v1/me/sendparentorder"
     url = f"{URL}{path}"
@@ -151,7 +152,7 @@ def ifd_order(buy_price, interval, product_code="BTC_JPY", buy_size=MIN_ORDER):
                 "condition_type": "LIMIT",
                 "side": "SELL",
                 "price": buy_price + interval,
-                "size": buy_size,
+                "size": sell_size,
             },
         ],
     }
