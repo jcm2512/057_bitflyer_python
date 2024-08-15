@@ -94,7 +94,7 @@ if __name__ == "__main__":
         for order in out_of_current_range:
             print(f"TEST: CANCELING ORDER")
             print("----------")
-            print(f"bottom: {bottom_range})"
+            print(f"bottom: {bottom_range}")
             print(f"price: {int(order['price'])}")
             id = order['parent_order_acceptance_id']
             print(f"id: {id}")
