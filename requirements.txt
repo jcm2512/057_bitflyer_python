@@ -1,7 +1,1 @@
 requests
-matplotlib
-mplfinance
-pandas
-numpy
-python-dotenv
-pytz

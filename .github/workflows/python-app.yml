@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: ["main"]
   schedule:
-    - cron: "0 * * * *" # Runs every hour
+    - cron: "*/20 * * * *" # Runs every 20 minutes
   workflow_dispatch: # Allows manual triggering
 
 permissions:
@@ -32,31 +32,6 @@ jobs:
         run: |
           echo "API_KEY=${{ secrets.API_KEY }}" >> $GITHUB_ENV
           echo "API_SECRET=${{ secrets.API_SECRET }}" >> $GITHUB_ENV
-          echo "COIN_API_KEY=${{ secrets.COIN_API_KEY }}" >> $GITHUB_ENV
-          echo "CRYPTOCOMPARE_API_KEY=${{ secrets.CRYPTOCOMPARE_API_KEY }}" >> $GITHUB_ENV
-          echo "OUTPUT_DIR=${{ secrets.OUTPUT_DIR }}" >> $GITHUB_ENV
 
       - name: Run Python script
         run: python main.py
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-images
-          path: |
-            docs/plot.png
-            docs/candlestick_plot.png
-
-      - name: Commit and push changes
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add docs/
-          if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Update generated images"
-            git push
-          else
-            echo "No changes to commit"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

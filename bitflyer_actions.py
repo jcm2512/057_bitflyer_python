@@ -1,6 +1,5 @@
 import os
 import time
-import pandas as pd
 import hashlib
 import hmac
 import requests
