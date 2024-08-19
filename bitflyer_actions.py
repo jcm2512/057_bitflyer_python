@@ -6,14 +6,12 @@ import hmac
 import requests
 import json
 
+from settings import MIN_ORDER, MIN_BUY_ORDER, FEE, PRODUCT_CODE
+
 API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 
 URL = "https://api.bitflyer.com"
-
-MIN_ORDER = 0.001
-MIN_BUY_ORDER = 0.00105
-FEE = 0.001
 
 
 def get_headers(api_key, api_secret, method, path, body=""):
@@ -55,10 +53,13 @@ def get_balance(currency_code):
             return float(balance["amount"])
 
 
-def get_open_ifd_orders(product_code="BTC_JPY"):
+def get_parent_orders():
     method = "GET"
     path = "/v1/me/getparentorders"
-    params = {"product_code": product_code, "parent_order_state": "ACTIVE"}
+    params = {
+        "product_code": PRODUCT_CODE,
+        "parent_order_state": "ACTIVE",
+    }
     query = "&".join(f"{key}={value}" for key, value in params.items())
     url = f"{URL}{path}?{query}"
 
@@ -67,15 +68,7 @@ def get_open_ifd_orders(product_code="BTC_JPY"):
 
     if response.status_code == 200:
         orders = response.json()
-        ifd_orders = [
-            {
-                "price": order["price"],
-                "parent_order_id": order["parent_order_id"],
-                "parent_order_acceptance_id": order["parent_order_acceptance_id"],
-            }
-            for order in orders
-            if order["parent_order_type"] == "IFD"
-        ]
+        ifd_orders = [order for order in orders if order["parent_order_type"] == "IFD"]
         return ifd_orders
     else:
         print(f"Error: {response.status_code}")
@@ -83,10 +76,32 @@ def get_open_ifd_orders(product_code="BTC_JPY"):
         return None
 
 
-def get_open_limit_orders(price_interval, product_code="BTC_JPY"):
+def get_parent_order(parent_order_acceptance_id):
+    method = "GET"
+    path = "/v1/me/getparentorder"
+    params = {
+        "product_code": PRODUCT_CODE,
+        "parent_order_acceptance_id": parent_order_acceptance_id,
+    }
+    query = "&".join(f"{key}={value}" for key, value in params.items())
+    url = f"{URL}{path}?{query}"
+
+    headers = get_headers(API_KEY, API_SECRET, method, path + "?" + query)
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        orders = response.json()
+        return orders
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+
+
+def get_open_limit_orders(side):
     method = "GET"
     path = "/v1/me/getchildorders"
-    params = {"product_code": product_code, "child_order_state": "ACTIVE"}
+    params = {"product_code": PRODUCT_CODE, "child_order_state": "ACTIVE"}
     query = "&".join(f"{key}={value}" for key, value in params.items())
     url = f"{URL}{path}?{query}"
 
@@ -96,12 +111,9 @@ def get_open_limit_orders(price_interval, product_code="BTC_JPY"):
     if response.status_code == 200:
         orders = response.json()
         limit_orders = [
-            {
-                "price": order["price"] - price_interval,
-                "child_order_id": order["child_order_id"],
-            }
+            order
             for order in orders
-            if order["child_order_type"] == "LIMIT"
+            if order["child_order_type"] == "LIMIT" and order["side"] == side
         ]
         return limit_orders
     else:
@@ -110,9 +122,9 @@ def get_open_limit_orders(price_interval, product_code="BTC_JPY"):
         return None
 
 
-def get_current_market_price(product_code="BTC_JPY"):
+def get_current_market_price():
     path = "/v1/getticker"
-    params = {"product_code": product_code}
+    params = {"product_code": PRODUCT_CODE}
     url = f"{URL}{path}"
 
     response = requests.get(url, params=params)
@@ -131,7 +143,13 @@ def has_funds_for_order(market_price, balance, amt=MIN_ORDER, fee=FEE):
     return balance >= required_jpy
 
 
-def ifd_order(buy_price, interval, product_code="BTC_JPY", buy_size=MIN_BUY_ORDER, sell_size=MIN_ORDER):
+def ifd_order(
+    buy_price,
+    interval,
+    product_code=PRODUCT_CODE,
+    buy_size=MIN_BUY_ORDER,
+    sell_size=MIN_ORDER,
+):
     method = "POST"
     path = "/v1/me/sendparentorder"
     url = f"{URL}{path}"
@@ -169,13 +187,13 @@ def ifd_order(buy_price, interval, product_code="BTC_JPY", buy_size=MIN_BUY_ORDE
         return None
 
 
-def cancel_parent_order(parent_order_acceptance_id, product_code="BTC_JPY"):
+def cancel_parent_order(parent_order_acceptance_id):
     method = "POST"
     path = "/v1/me/cancelparentorder"
     url = f"{URL}{path}"
 
     body = {
-        "product_code": product_code,
+        "product_code": PRODUCT_CODE,
         "parent_order_acceptance_id": parent_order_acceptance_id,
     }
     body_json = json.dumps(body)
