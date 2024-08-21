@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     market_price = TEST_PRICE or get_current_market_price()
     buy_order_amt = find_closest_interval(market_price, intervals)
-    bottom_range = buy_order_amt - PRICE_INTERVAL
+    bottom_range = buy_order_amt - (2 * PRICE_INTERVAL)
 
     print(f"MARKET PRICE: {market_price}")
     print(f"BUY ORDER: {buy_order_amt}")
