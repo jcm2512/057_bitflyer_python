@@ -21,6 +21,15 @@ def find_closest_interval(market_price, intervals):
     return closest_interval
 
 
+def find_closest_lower_interval(market_price, intervals):
+    lower_intervals = [x for x in intervals if x <= market_price]
+
+    if not lower_intervals:
+        return None
+
+    return max(lower_intervals)
+
+
 def is_open_order(amt, open_orders):
     if open_orders is None:
         return False
@@ -43,7 +52,9 @@ if __name__ == "__main__":
 
     market_price = TEST_PRICE or get_current_market_price()
     buy_order_amt = find_closest_interval(market_price, intervals)
-    bottom_range = buy_order_amt - (2 * PRICE_INTERVAL)
+
+    bottom_range_amt = find_closest_lower_interval(market_price, intervals)
+    bottom_range = bottom_range_amt - PRICE_INTERVAL
 
     print(f"MARKET PRICE: {market_price}")
     print(f"BUY ORDER: {buy_order_amt}")
@@ -89,7 +100,6 @@ if __name__ == "__main__":
         # Cancel BUY orders that are below cuttoff
         # ----------------------------------------
 
-        bottom_range = buy_order_amt - PRICE_INTERVAL
         out_of_current_range = [
             {
                 "price": order["price"],
