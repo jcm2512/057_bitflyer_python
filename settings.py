@@ -1,4 +1,4 @@
-LIVE = True
+LIVE = False
 
 PRODUCT_CODE = "BTC_JPY"
 
