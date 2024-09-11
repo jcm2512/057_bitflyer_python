@@ -9,25 +9,34 @@ from bitflyer_actions import (
     cancel_parent_order,
 )
 
-from settings import LIVE, TEST_PRICE, MIN_PRICE, MAX_PRICE, PRICE_INTERVAL
+from settings import (
+    LIVE,
+    TEST_PRICE,
+    MIN_PRICE,
+    MAX_PRICE,
+    PRICE_INTERVAL,
+    PLACE_ORDERS,
+    CANCEL_ORDERS,
+)
 
 
 def grid_intervals(min=MIN_PRICE, max=MAX_PRICE, interval=PRICE_INTERVAL):
     return [num for num in range(min, max, interval)]
 
 
-def find_closest_interval(market_price, intervals):
-    closest_interval = min(intervals, key=lambda x: abs(x - market_price))
-    return closest_interval
+def find_interval(market_price, intervals, floor=False):
+    if floor:
+        lower_intervals = [x for x in intervals if x <= market_price]
 
+        if not lower_intervals:
+            print(f"ERROR: No intervals found below {market_price}")
+            return None
 
-def find_closest_lower_interval(market_price, intervals):
-    lower_intervals = [x for x in intervals if x <= market_price]
+        out = max(lower_intervals)
+    else:
+        out = min(intervals, key=lambda x: abs(x - market_price))
 
-    if not lower_intervals:
-        return None
-
-    return max(lower_intervals)
+    return out
 
 
 def is_open_order(amt, open_orders):
@@ -51,17 +60,14 @@ if __name__ == "__main__":
     open_limit_sell_orders = get_open_limit_orders("SELL")
 
     market_price = TEST_PRICE or get_current_market_price()
-    buy_order_amt = find_closest_interval(market_price, intervals)
 
-    bottom_range_amt = find_closest_lower_interval(market_price, intervals)
-    bottom_range = bottom_range_amt - PRICE_INTERVAL
+    buy_order_amt = find_interval(market_price, intervals)
 
     print(f"MARKET PRICE: {market_price}")
     print(f"BUY ORDER: {buy_order_amt}")
     print("")
 
     print(f"RANGE: \n{MIN_PRICE} - {MAX_PRICE - PRICE_INTERVAL}")
-    print(f"BOTTOM: \n{bottom_range}")
     print("")
     print(
         f"ACTIVE SELL Orders: \n{[order['price'] for order in open_limit_sell_orders]}"
@@ -73,52 +79,21 @@ if __name__ == "__main__":
     # Max price should be at least 1 interval below the highest price
 
     if LIVE:
-        # Check if price band is within range
-        if (MIN_PRICE - PRICE_INTERVAL) <= market_price <= MAX_PRICE:
-            buy_order_amt = find_closest_interval(market_price, intervals)
-
-            # Check if BUY price PLUS interval == any open SELL order
-            if not is_open_order(
-                buy_order_amt + PRICE_INTERVAL, open_limit_sell_orders
-            ):
-                print(f"buy amt: {buy_order_amt}")
-
-                # Check balance and create IFD order
-                if has_funds_for_order(market_price, get_balance("JPY")):
-                    if LIVE:
-                        ifd_order(buy_order_amt, grid_interval)
-                    else:
-                        print(f"TEST: IFD ORDER FOR {buy_order_amt}")
-
-                else:
-                    print("INSUFFICIENT FUNDS")
-            else:
-                print(f"Existing Order:{buy_order_amt} \nEXITING...")
-        else:
+        if not (MIN_PRICE - PRICE_INTERVAL) <= market_price <= MAX_PRICE:
             print("PRICE IS OUT OF RANGE")
 
-        # Cancel BUY orders that are below cuttoff
-        # ----------------------------------------
+        elif is_open_order(buy_order_amt + PRICE_INTERVAL, open_limit_sell_orders):
+            print(f"Existing Order:{buy_order_amt} \nEXITING...")
 
-        out_of_current_range = [
-            {
-                "price": order["price"],
-                "parent_order_acceptance_id": order["parent_order_acceptance_id"],
-            }
-            for order in open_parent_buy_orders
-            if order["price"] <= bottom_range
-        ]
-        if out_of_current_range:
-            print("\n----------")
-            print(f"CANCELING ORDERS")
+        # Check Balance
+        elif not has_funds_for_order(market_price, get_balance("JPY")):
+            print("INSUFFICIENT FUNDS")
 
-            for order in out_of_current_range:
-                print("----------")
-                print(f"bottom: {bottom_range}")
-                print(f"price: {int(order['price'])}")
-                id = order["parent_order_acceptance_id"]
-                print(f"id: {id}")
-                cancel_parent_order(id)
-
+        else:
+            print(f"buy amt: {buy_order_amt}")
+            if PLACE_ORDERS:
+                ifd_order(buy_order_amt, grid_interval)
+            else:
+                print(f"TEST: IFD ORDER FOR {buy_order_amt}")
 
 print("\n>>> End of script")
