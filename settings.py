@@ -1,4 +1,4 @@
-LIVE = False
+LIVE = True
 PLACE_ORDERS = False
 CANCEL_ORDERS = False
 
